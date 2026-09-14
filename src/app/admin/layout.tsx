@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AdminToastProvider } from "@/components/admin/AdminToast";
+
+import { adminLogoutAction } from "@/lib/actions/admin-auth";
 
 export const metadata: Metadata = {
   title: "Admin — LIVRA",
@@ -22,8 +24,9 @@ export default async function AdminLayout({
   children,
 }: LayoutProps<"/admin">) {
   const session = await getSessionUser();
-  if (!session) redirect("/login?next=/admin");
-  if (session.user.role !== "admin") notFound();
+  if (!session || session.user.role !== "admin") {
+    redirect("/atelier-portal?next=/admin");
+  }
 
   return (
     <AdminToastProvider>
@@ -36,7 +39,7 @@ export default async function AdminLayout({
                 LIVRA Admin
               </p>
               <p className="mt-1 truncate text-sm text-muted-foreground">
-                {session.user.phoneNumber}
+                {session.user.email || session.user.phoneNumber || "Administrator"}
               </p>
             </div>
             <Separator />
@@ -53,20 +56,44 @@ export default async function AdminLayout({
               ))}
             </nav>
             <Separator />
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/">← Back to store</Link>
-            </Button>
+            <div className="space-y-2">
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/">← Back to store</Link>
+              </Button>
+              <form action={adminLogoutAction}>
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-muted-foreground hover:text-red-500 transition-colors cursor-pointer"
+                >
+                  Sign Out
+                </Button>
+              </form>
+            </div>
           </div>
         </aside>
 
         <main className="min-w-0 flex-1">
-          <nav className="mb-6 flex gap-2 md:hidden" aria-label="Admin">
-            {NAV.map((l) => (
-              <Button key={l.href} asChild size="sm" variant="outline">
-                <Link href={l.href}>{l.label}</Link>
+          <div className="mb-6 flex items-center justify-between gap-2 md:hidden">
+            <nav className="flex gap-2" aria-label="Admin">
+              {NAV.map((l) => (
+                <Button key={l.href} asChild size="sm" variant="outline">
+                  <Link href={l.href}>{l.label}</Link>
+                </Button>
+              ))}
+            </nav>
+            <form action={adminLogoutAction}>
+              <Button
+                type="submit"
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground hover:text-red-500"
+              >
+                Sign Out
               </Button>
-            ))}
-          </nav>
+            </form>
+          </div>
           {children}
         </main>
       </div>

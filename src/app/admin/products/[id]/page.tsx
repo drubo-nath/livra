@@ -16,18 +16,59 @@ export default async function EditProductPage({
   const productId = Number(id);
   if (!Number.isInteger(productId)) notFound();
 
-  const [row] = await db
-    .select()
-    .from(schema.products)
-    .where(eq(schema.products.id, productId))
-    .limit(1);
-  if (!row) notFound();
+  let row: (typeof schema.products.$inferSelect) | null = null;
+  let imageRows: { id: number; url: string }[] = [];
 
-  const imageRows = await db
-    .select({ id: schema.productImages.id, url: schema.productImages.url })
-    .from(schema.productImages)
-    .where(eq(schema.productImages.productId, productId))
-    .orderBy(asc(schema.productImages.position));
+  const { isDbConfigured } = await import("@/db");
+  const { productSeeds } = await import("@/db/seed-data");
+
+  if (isDbConfigured) {
+    try {
+      const [dbRow] = await db
+        .select()
+        .from(schema.products)
+        .where(eq(schema.products.id, productId))
+        .limit(1);
+      row = dbRow ?? null;
+
+      if (row) {
+        imageRows = await db
+          .select({ id: schema.productImages.id, url: schema.productImages.url })
+          .from(schema.productImages)
+          .where(eq(schema.productImages.productId, productId))
+          .orderBy(asc(schema.productImages.position));
+      }
+    } catch (err) {
+      console.warn("[EditProductPage] Database query failed, using seeds fallback:", err);
+    }
+  }
+
+  if (!row) {
+    const seed = productSeeds[productId - 1];
+    if (seed) {
+      row = {
+        id: productId,
+        name: seed.name,
+        slug: seed.slug,
+        tagline: seed.tagline,
+        description: seed.description,
+        price: seed.price,
+        compareAtPrice: seed.compareAtPrice ?? null,
+        finish: seed.finish,
+        badge: seed.badge ?? null,
+        sizes: seed.sizes ?? null,
+        toneA: seed.toneA,
+        toneB: seed.toneB,
+        isActive: true,
+        sortOrder: seed.sortOrder ?? productId,
+        imageUrl: seed.imageUrl ?? null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
+  }
+
+  if (!row) notFound();
 
   // Admin previews need viewable URLs, not raw keys — presign server-side.
   const images = await Promise.all(

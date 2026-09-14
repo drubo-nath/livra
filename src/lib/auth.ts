@@ -53,7 +53,23 @@ export const auth = betterAuth({
 
 /** Helper for server components/actions: resolve the current session. */
 export async function getSessionUser() {
-  const { headers } = await import("next/headers");
-  const session = await auth.api.getSession({ headers: await headers() });
-  return session ?? null;
+  // 1. Check dedicated admin session cookie first (password-based secret login)
+  try {
+    const { getAdminSessionFromCookies } = await import("@/lib/admin-auth");
+    const adminSession = await getAdminSessionFromCookies();
+    if (adminSession) {
+      return adminSession;
+    }
+  } catch (err) {
+    console.error("[getSessionUser] Error checking admin session:", err);
+  }
+
+  // 2. Fall back to Better Auth session (OTP customer users)
+  try {
+    const { headers } = await import("next/headers");
+    const session = await auth.api.getSession({ headers: await headers() });
+    return session ?? null;
+  } catch {
+    return null;
+  }
 }

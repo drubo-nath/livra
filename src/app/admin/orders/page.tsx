@@ -18,18 +18,29 @@ export const dynamic = "force-dynamic";
 const STATUSES = ["pending", "confirmed", "fulfilled", "cancelled"] as const;
 
 export default async function AdminOrders() {
-  const orders = await db
-    .select()
-    .from(schema.orders)
-    .orderBy(desc(schema.orders.createdAt))
-    .limit(100);
+  let orders: (typeof schema.orders.$inferSelect)[] = [];
+  let items: (typeof schema.orderItems.$inferSelect)[] = [];
 
-  const items = orders.length
-    ? await db
+  const { isDbConfigured } = await import("@/db");
+  if (isDbConfigured) {
+    try {
+      orders = await db
         .select()
-        .from(schema.orderItems)
-        .where(inArray(schema.orderItems.orderId, orders.map((o) => o.id)))
-    : [];
+        .from(schema.orders)
+        .orderBy(desc(schema.orders.createdAt))
+        .limit(100);
+
+      items = orders.length
+        ? await db
+            .select()
+            .from(schema.orderItems)
+            .where(inArray(schema.orderItems.orderId, orders.map((o) => o.id)))
+        : [];
+    } catch (err) {
+      console.warn("[AdminOrders] Database query failed, using empty fallback:", err);
+    }
+  }
+
   const byOrder = new Map<number, typeof items>();
   for (const it of items) {
     const list = byOrder.get(it.orderId) ?? [];

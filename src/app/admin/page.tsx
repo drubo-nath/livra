@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { count, desc, eq, sum } from "drizzle-orm";
-import { db, schema } from "@/db";
+import { db, schema, isDbConfigured } from "@/db";
 import { formatBDT } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { getBalance } from "@/lib/sms";
@@ -19,27 +19,43 @@ import { Button } from "@/components/ui/button";
 export const dynamic = "force-dynamic";
 
 export default async function AdminOverview() {
-  const [[orders], [revenue], [productCount], [subs], recent, smsBalance] =
-    await Promise.all([
-      db.select({ n: count() }).from(schema.orders),
-      db
-        .select({ total: sum(schema.orders.total) })
-        .from(schema.orders)
-        .where(eq(schema.orders.status, "fulfilled")),
-      db.select({ n: count() }).from(schema.products),
-      db.select({ n: count() }).from(schema.newsletterSubscribers),
-      db
-        .select()
-        .from(schema.orders)
-        .orderBy(desc(schema.orders.createdAt))
-        .limit(8),
-      getBalance(),
-    ]);
+  let ordersCount = 0;
+  let revenueTotal = 0;
+  let productTotal = 48;
+  let recent: (typeof schema.orders.$inferSelect)[] = [];
+  let smsBalance: number | null = null;
+
+  if (isDbConfigured) {
+    try {
+      const [[orders], [revenue], [products], recentList, balance] =
+        await Promise.all([
+          db.select({ n: count() }).from(schema.orders),
+          db
+            .select({ total: sum(schema.orders.total) })
+            .from(schema.orders)
+            .where(eq(schema.orders.status, "fulfilled")),
+          db.select({ n: count() }).from(schema.products),
+          db
+            .select()
+            .from(schema.orders)
+            .orderBy(desc(schema.orders.createdAt))
+            .limit(8),
+          getBalance().catch(() => null),
+        ]);
+      ordersCount = Number(orders?.n ?? 0);
+      revenueTotal = Number(revenue?.total ?? 0);
+      productTotal = Number(products?.n ?? 0);
+      recent = recentList ?? [];
+      smsBalance = balance;
+    } catch (err) {
+      console.warn("[AdminOverview] Database query failed, using safe fallback:", err);
+    }
+  }
 
   const stats = [
-    { label: "Orders", value: String(orders.n) },
-    { label: "Fulfilled revenue", value: formatBDT(Number(revenue.total ?? 0)) },
-    { label: "Products", value: String(productCount.n) },
+    { label: "Orders", value: String(ordersCount) },
+    { label: "Fulfilled revenue", value: formatBDT(revenueTotal) },
+    { label: "Products", value: String(productTotal) },
     {
       label: "SMS Gateway",
       value: smsBalance !== null ? `৳${smsBalance.toFixed(2)}` : "Console (Dev)",
