@@ -119,7 +119,7 @@ export default function ToolCard({
         </Link>
 
         {/* Price Row */}
-        <div className="mt-0.5 flex items-center justify-center gap-2">
+        <div className="mt-0.5 flex items-center justify-center gap-2 font-numeric">
           <span className="text-xs sm:text-sm font-semibold text-ink">
             {product.compareAtPrice ? "From " : ""}৳ {product.price.toLocaleString()}
           </span>

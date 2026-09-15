@@ -4,7 +4,9 @@ export const paymentMethods = ["cod", "bkash", "nagad", "card"] as const;
 
 export const checkoutSchema = z.object({
   name: z.string().trim().min(2, "Name is too short").max(80),
-  // Contact phone comes from the verified session — never trusted from forms.
+  // Contact phone: by default uses session phone; if alternate recipientPhone is provided, phoneVerificationToken is validated
+  recipientPhone: z.string().trim().optional().or(z.literal("")),
+  phoneVerificationToken: z.string().trim().optional().or(z.literal("")),
   email: z
     .string()
     .trim()

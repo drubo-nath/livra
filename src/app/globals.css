@@ -35,8 +35,18 @@ body {
   background: var(--color-bone);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-variant-numeric: lining-nums;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* ─── Professional Numerals (Lining + Tabular) ─── */
+.font-numeric,
+.tabular-nums,
+[data-numeric] {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
 ::selection {

@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { useCart } from "@/components/cart/CartProvider";
 import { useWishlist } from "@/lib/hooks/useWishlist";
@@ -36,7 +36,6 @@ export default function Header() {
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const [sizeModalOpen, setSizeModalOpen] = useState(false);
-  const router = useRouter();
   const pathname = usePathname();
 
   const isHome = pathname === "/";
@@ -215,26 +214,20 @@ export default function Header() {
                       <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-clay ring-1 ring-white" />
                     </Link>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (confirm("Do you want to sign out?")) {
-                          await authClient.signOut();
-                          router.refresh();
-                        }
-                      }}
+                    <Link
+                      href="/profile"
                       className={cn(
                         "relative flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300 active:scale-90 cursor-pointer",
                         isTransparent
                           ? "text-white hover:bg-white/10"
                           : "text-ink hover:bg-ink/5 hover:text-clay"
                       )}
-                      aria-label={`Signed in as ${session.user.name || session.user.email}. Click to sign out.`}
-                      title={`Signed in as ${session.user.name || session.user.email} (Click to sign out)`}
+                      aria-label="My Account"
+                      title={`Signed in as ${session.user.name || session.user.phoneNumber}`}
                     >
                       <User className="h-5 w-5" strokeWidth={1.5} />
                       <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-1 ring-white" />
-                    </button>
+                    </Link>
                   )}
                 </div>
               ) : (

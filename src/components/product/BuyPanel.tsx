@@ -35,9 +35,11 @@ export default function BuyPanel({ product }: { product: ProductDTO }) {
     >
       {/* Price */}
       <div className="mt-6 flex items-baseline gap-3">
-        <p className="font-serif text-3xl">{formatBDT(product.price)}</p>
+        <p className="font-numeric text-3xl font-semibold tracking-tight text-ink">
+          {formatBDT(product.price)}
+        </p>
         {product.compareAtPrice && (
-          <p className="text-sm text-taupe line-through">
+          <p className="font-numeric text-sm text-taupe line-through">
             {formatBDT(product.compareAtPrice)}
           </p>
         )}

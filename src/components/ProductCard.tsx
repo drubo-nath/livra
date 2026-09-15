@@ -168,8 +168,8 @@ export default function ProductCard({ product }: { product: ProductDTO }) {
           <h3 className="font-serif font-semibold text-[14px] sm:text-[15px] md:text-base text-ink leading-snug line-clamp-2 group-hover/title:text-clay transition-colors duration-300">
             {product.name}
           </h3>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="font-base text-[12px] sm:text-sm text-ink font-normal">
+          <div className="mt-1 flex items-baseline gap-2 font-numeric">
+            <span className="font-base text-[12px] sm:text-sm text-ink font-semibold">
               ৳ {product.price.toLocaleString("en-US")}
             </span>
             {product.compareAtPrice && (

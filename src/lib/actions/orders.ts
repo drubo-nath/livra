@@ -31,7 +31,7 @@ export async function placeOrder(input: CheckoutInput): Promise<OrderResult> {
     };
   }
   const userId = session.user.id;
-  const userPhone = session.user.phoneNumber!;
+  let orderPhone = session.user.phoneNumber!;
 
   const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) {
@@ -41,6 +41,31 @@ export async function placeOrder(input: CheckoutInput): Promise<OrderResult> {
     };
   }
   const data = parsed.data;
+
+  // If alternate delivery phone is specified and differs from account phone, verify OTP token
+  if (data.recipientPhone && data.recipientPhone !== session.user.phoneNumber) {
+    const { normalizeBDPhone } = await import("@/lib/phone");
+    const { verifyOrderPhoneToken } = await import("@/lib/actions/phone-verify");
+
+    const normalizedRecipient = normalizeBDPhone(data.recipientPhone);
+    if (!normalizedRecipient) {
+      return { ok: false, error: "Invalid delivery mobile number." };
+    }
+
+    const isTokenValid = await verifyOrderPhoneToken(
+      normalizedRecipient,
+      data.phoneVerificationToken ?? "",
+    );
+
+    if (!isTokenValid) {
+      return {
+        ok: false,
+        error: "Please verify the delivery mobile number via OTP before confirming your order.",
+      };
+    }
+
+    orderPhone = normalizedRecipient;
+  }
 
   try {
     const result = await db.transaction(async (tx) => {
@@ -82,11 +107,11 @@ export async function placeOrder(input: CheckoutInput): Promise<OrderResult> {
       const shippingFee = shippingFeeFor(subtotal);
       const total = subtotal + shippingFee;
 
-      // 3. Find-or-create customer (identity = verified session phone)
+      // 3. Find-or-create customer (identity = order phone)
       const existing = await tx
         .select()
         .from(schema.customers)
-        .where(inArray(schema.customers.phone, [userPhone]))
+        .where(inArray(schema.customers.phone, [orderPhone]))
         .limit(1);
       let customerId = existing[0]?.id;
       if (!customerId) {
@@ -94,7 +119,7 @@ export async function placeOrder(input: CheckoutInput): Promise<OrderResult> {
           .insert(schema.customers)
           .values({
             name: data.name,
-            phone: userPhone,
+            phone: orderPhone,
             email: data.email || null,
           })
           .returning({ id: schema.customers.id });
@@ -110,7 +135,7 @@ export async function placeOrder(input: CheckoutInput): Promise<OrderResult> {
           userId,
           customerId,
           customerName: data.name,
-          phone: userPhone,
+          phone: orderPhone,
           email: data.email || null,
           addressLine: data.address,
           city: data.city,
@@ -130,8 +155,8 @@ export async function placeOrder(input: CheckoutInput): Promise<OrderResult> {
       return { ok: true as const, orderNumber, total };
     });
 
-    // Send order confirmation SMS non-blockingly
-    sendSMS(userPhone, orderConfirmationMessage(result.orderNumber, result.total)).catch(
+    // Send order confirmation SMS non-blockingly to the recipient phone
+    sendSMS(orderPhone, orderConfirmationMessage(result.orderNumber, result.total)).catch(
       (err) => {
         console.error("[orders] SMS notification failed:", err);
       },

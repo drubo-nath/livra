@@ -15,8 +15,6 @@ import OrderStatusSelector from "@/components/admin/OrderStatusSelector";
 
 export const dynamic = "force-dynamic";
 
-const STATUSES = ["pending", "confirmed", "fulfilled", "cancelled"] as const;
-
 export default async function AdminOrders() {
   let orders: (typeof schema.orders.$inferSelect)[] = [];
   let items: (typeof schema.orderItems.$inferSelect)[] = [];
@@ -57,11 +55,11 @@ export default async function AdminOrders() {
           <Card key={o.id}>
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
               <CardTitle className="flex flex-wrap items-center gap-x-4 gap-y-1 text-base">
-                <span>{o.orderNumber}</span>
-                <span className="text-sm font-normal text-muted-foreground">
+                <span className="font-numeric font-medium">{o.orderNumber}</span>
+                <span className="text-sm font-normal text-muted-foreground font-numeric">
                   {formatPhone(o.phone)}
                 </span>
-                <span className="text-sm font-normal text-muted-foreground">
+                <span className="text-sm font-normal text-muted-foreground font-numeric">
                   {formatBDT(o.total)}
                 </span>
               </CardTitle>
@@ -83,7 +81,7 @@ export default async function AdminOrders() {
                   Delivery
                 </p>
                 <p className="mt-2">
-                  {o.customerName} · {formatPhone(o.phone)}
+                  {o.customerName} · <span className="font-numeric">{formatPhone(o.phone)}</span>
                   {o.email && (
                     <span className="block text-xs text-muted-foreground">
                       {o.email}
@@ -107,18 +105,22 @@ export default async function AdminOrders() {
                       <span>
                         {it.productName}{" "}
                         <span className="text-xs text-muted-foreground">
-                          · {it.finish} · {it.size} × {it.qty}
+                          · {it.finish} · {it.size} × <span className="font-numeric">{it.qty}</span>
                         </span>
                       </span>
-                      <span>{formatBDT(it.lineTotal)}</span>
+                      <span className="font-numeric font-medium">{formatBDT(it.lineTotal)}</span>
                     </li>
                   ))}
                 </ul>
                 <p className="mt-3 flex justify-between text-xs text-muted-foreground">
-                  <span>Subtotal {formatBDT(o.subtotal)}</span>
+                  <span>
+                    Subtotal <span className="font-numeric">{formatBDT(o.subtotal)}</span>
+                  </span>
                   <span>
                     Delivery{" "}
-                    {o.shippingFee === 0 ? "Free" : formatBDT(o.shippingFee)}
+                    <span className="font-numeric">
+                      {o.shippingFee === 0 ? "Free" : formatBDT(o.shippingFee)}
+                    </span>
                   </span>
                 </p>
               </div>

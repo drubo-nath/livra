@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { X, ChevronRight, Globe, Check } from "lucide-react";
-import { subscribe } from "@/lib/actions/newsletter";
+import { X, ChevronRight, Globe } from "lucide-react";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -21,26 +19,6 @@ export default function MobileMenu({
 }) {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
-  const [showSignupInput, setShowSignupInput] = useState(false);
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupDone, setSignupDone] = useState(false);
-  const [isPendingSubscribe, startTransition] = useTransition();
-
-  const handleSignup = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signupEmail.trim()) return;
-    startTransition(async () => {
-      const res = await subscribe(signupEmail.trim());
-      if (res.ok) {
-        setSignupDone(true);
-        setTimeout(() => {
-          setShowSignupInput(false);
-          setSignupDone(false);
-          setSignupEmail("");
-        }, 2200);
-      }
-    });
-  };
 
   const menuSections: { label: string; href: string; onClick?: () => void }[] = [
     { label: "New In", href: "/shop?badge=New" },
@@ -54,9 +32,14 @@ export default function MobileMenu({
       label: "Size Guide",
       href: "/sizing",
     },
-    ...(session?.user.role === "admin"
-      ? [{ label: "Admin Portal", href: "/admin" }]
-      : []),
+    ...(session
+      ? [
+          { label: "My Profile", href: "/profile" },
+          ...(session.user.role === "admin"
+            ? [{ label: "Admin Portal", href: "/admin" }]
+            : []),
+        ]
+      : [{ label: "Sign In", href: "/login" }]),
   ];
 
   return (
@@ -118,50 +101,6 @@ export default function MobileMenu({
               ))}
             </nav>
 
-            {/* Newsletter Sign Up Card (Matching Versace reference)
-            <div className="px-6 py-10 text-center border-t border-neutral-100 mt-2">
-              <p className="font-serif text-xs md:text-sm text-neutral-600 max-w-xs mx-auto leading-relaxed">
-                Hear about exclusive events, collections and news
-              </p>
-
-              <div className="mt-4 flex justify-center">
-                {showSignupInput ? (
-                  <form onSubmit={handleSignup} className="w-full max-w-xs space-y-2">
-                    {signupDone ? (
-                      <div className="flex items-center justify-center gap-2 py-2.5 text-xs text-clay font-medium">
-                        <Check className="h-4 w-4" /> Thank you for subscribing!
-                      </div>
-                    ) : (
-                      <div className="flex border border-ink">
-                        <input
-                          type="email"
-                          required
-                          value={signupEmail}
-                          onChange={(e) => setSignupEmail(e.target.value)}
-                          placeholder="Your email"
-                          className="flex-1 bg-transparent px-3 py-2 text-xs text-ink outline-none"
-                        />
-                        <button
-                          type="submit"
-                          disabled={isPendingSubscribe}
-                          className="bg-ink px-4 text-xs font-serif uppercase tracking-widest text-white hover:bg-clay transition-colors"
-                        >
-                          {isPendingSubscribe ? "…" : "Join"}
-                        </button>
-                      </div>
-                    )}
-                  </form>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowSignupInput(true)}
-                    className="border border-ink px-10 py-2.5 font-serif text-xs uppercase tracking-[0.2em] text-ink hover:bg-ink hover:text-white transition-colors cursor-pointer"
-                  >
-                    SIGN UP
-                  </button>
-                )}
-              </div>
-            </div> */}
           </div>
 
           {/* ── Footer Bar (Matching Versace reference) ── */}
@@ -191,13 +130,23 @@ export default function MobileMenu({
 
               <span className="text-neutral-300 select-none">|</span>
 
-              <Link
-                href="/sizing"
-                onClick={onClose}
-                className="underline underline-offset-4 hover:text-ink"
-              >
-                Care &amp; Sizing
-              </Link>
+              {onOpenSizeGuide ? (
+                <button
+                  type="button"
+                  onClick={onOpenSizeGuide}
+                  className="underline underline-offset-4 hover:text-ink cursor-pointer"
+                >
+                  Care &amp; Sizing
+                </button>
+              ) : (
+                <Link
+                  href="/sizing"
+                  onClick={onClose}
+                  className="underline underline-offset-4 hover:text-ink"
+                >
+                  Care &amp; Sizing
+                </Link>
+              )}
 
               <span className="text-neutral-300 select-none">|</span>
 

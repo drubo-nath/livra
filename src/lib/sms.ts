@@ -13,7 +13,6 @@
 
 const DEFAULT_SEND_URL = "https://api.sms.net.bd/sendsms";
 const DEFAULT_BALANCE_URL = "https://api.sms.net.bd/user/balance/";
-const DEFAULT_REPORT_URL = "https://api.sms.net.bd/report/request/";
 
 /** Error descriptions for standard sms.net.bd error codes */
 const ERROR_TEXT: Record<number, string> = {

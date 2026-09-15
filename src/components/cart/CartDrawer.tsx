@@ -131,7 +131,7 @@ export default function CartDrawer() {
                 <footer className="hairline border-t px-6 py-5">
                   <div className="mb-1 flex items-center justify-between">
                     <p className="text-xs uppercase tracking-widest text-taupe font-medium">Subtotal</p>
-                    <p className="font-serif text-xl">{formatBDT(subtotal)}</p>
+                    <p className="font-numeric font-semibold text-xl text-ink">{formatBDT(subtotal)}</p>
                   </div>
                   <p className="mb-5 text-xs text-taupe">
                     Free delivery over ৳2,500 · Cash on delivery available

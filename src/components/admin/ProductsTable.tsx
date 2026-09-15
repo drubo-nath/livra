@@ -207,8 +207,8 @@ export default function ProductsTable({
                         <span className="text-muted-foreground">{p.finish}</span>
                       )}
                     </TableCell>
-                    <TableCell>{formatBDT(p.price)}</TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="font-numeric font-medium">{formatBDT(p.price)}</TableCell>
+                    <TableCell className="text-muted-foreground font-numeric">
                       {Number(p.imageCount)}
                     </TableCell>
                     <TableCell>

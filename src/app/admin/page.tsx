@@ -75,7 +75,7 @@ export default async function AdminOverview() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-semibold">{s.value}</p>
+              <p className="text-2xl font-semibold font-numeric">{s.value}</p>
             </CardContent>
           </Card>
         ))}
@@ -102,14 +102,14 @@ export default async function AdminOverview() {
           <TableBody>
             {recent.map((o) => (
               <TableRow key={o.id}>
-                <TableCell className="font-medium">{o.orderNumber}</TableCell>
+                <TableCell className="font-medium font-numeric">{o.orderNumber}</TableCell>
                 <TableCell>
                   {o.customerName}
-                  <span className="block text-xs text-muted-foreground">
+                  <span className="block text-xs text-muted-foreground font-numeric">
                     {formatPhone(o.phone)}
                   </span>
                 </TableCell>
-                <TableCell>{formatBDT(o.total)}</TableCell>
+                <TableCell className="font-numeric font-medium">{formatBDT(o.total)}</TableCell>
                 <TableCell>
                   <Badge
                     variant={
