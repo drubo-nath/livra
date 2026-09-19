@@ -36,11 +36,23 @@ export interface AdminProductRow {
 interface ProductsTableProps {
   initialProducts: AdminProductRow[];
   covers: Record<number, string | null>;
+  mode?: "products" | "tools";
+  title?: string;
+  subtitle?: string;
+  newHref?: string;
+  newButtonText?: string;
+  editBaseHref?: string;
 }
 
 export default function ProductsTable({
   initialProducts,
   covers,
+  mode = "products",
+  title,
+  subtitle,
+  newHref,
+  newButtonText,
+  editBaseHref,
 }: ProductsTableProps) {
   const [products, setProducts] = useState<AdminProductRow[]>(initialProducts);
   const [pendingActionId, setPendingActionId] = useState<number | null>(null);
@@ -49,7 +61,17 @@ export default function ProductsTable({
   const [isPending, startTransition] = useTransition();
   const { toast } = useAdminToast();
 
+  const isToolsMode = mode === "tools";
+  const displayTitle = title || (isToolsMode ? "Tools & Accessories" : "Products");
   const hiddenCount = products.filter((p) => !p.isActive).length;
+  const displaySubtitle =
+    subtitle ||
+    (isToolsMode
+      ? `${products.length} tools & accessories · ${hiddenCount} hidden`
+      : `${products.length} products · ${hiddenCount} hidden`);
+  const displayNewHref = newHref || (isToolsMode ? "/admin/tools/new" : "/admin/products/new");
+  const displayNewText = newButtonText || (isToolsMode ? "+ New Tool / Accessory" : "+ New product");
+  const editPrefix = editBaseHref || (isToolsMode ? "/admin/tools" : "/admin/products");
 
   const handleToggleActive = (product: AdminProductRow) => {
     const nextState = !product.isActive;
@@ -119,13 +141,13 @@ export default function ProductsTable({
     <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{displayTitle}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {products.length} products · {hiddenCount} hidden
+            {displaySubtitle}
           </p>
         </div>
         <Button asChild>
-          <Link href="/admin/products/new">+ New product</Link>
+          <Link href={displayNewHref}>{displayNewText}</Link>
         </Button>
       </div>
 
@@ -134,8 +156,8 @@ export default function ProductsTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-14">Image</TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead>Finish</TableHead>
+              <TableHead>{isToolsMode ? "Tool / Accessory" : "Product"}</TableHead>
+              {!isToolsMode && <TableHead>Finish</TableHead>}
               <TableHead>Price</TableHead>
               <TableHead>Images</TableHead>
               <TableHead>Status</TableHead>
@@ -198,15 +220,17 @@ export default function ProductsTable({
                       </p>
                       <p className="text-xs text-muted-foreground">/{p.slug}</p>
                     </TableCell>
-                    <TableCell>
-                      {p.isTool ? (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-900 border-amber-200">
-                          Tool &amp; Accessory
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">{p.finish}</span>
-                      )}
-                    </TableCell>
+                    {!isToolsMode && (
+                      <TableCell>
+                        {p.isTool ? (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-900 border-amber-200">
+                            Tool &amp; Accessory
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">{p.finish}</span>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="font-numeric font-medium">{formatBDT(p.price)}</TableCell>
                     <TableCell className="text-muted-foreground font-numeric">
                       {Number(p.imageCount)}
@@ -222,7 +246,7 @@ export default function ProductsTable({
                     <TableCell className="text-right">
                       <div className="flex justify-end items-center gap-1.5">
                         <Button asChild size="sm" variant="outline">
-                          <Link href={`/admin/products/${p.id}`}>Edit</Link>
+                          <Link href={`${editPrefix}/${p.id}`}>Edit</Link>
                         </Button>
 
                         <Button

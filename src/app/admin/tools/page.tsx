@@ -6,7 +6,7 @@ import ProductsTable, { type AdminProductRow } from "@/components/admin/Products
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminProducts() {
+export default async function AdminToolsPage() {
   let rows: {
     id: number;
     slug: string;
@@ -43,7 +43,7 @@ export default async function AdminProducts() {
         .from(schema.products)
         .orderBy(asc(schema.products.sortOrder), asc(schema.products.id));
     } catch (err) {
-      console.warn("[AdminProducts] Database query failed, using seeds fallback:", err);
+      console.warn("[AdminToolsPage] Database query failed, using seeds fallback:", err);
     }
   }
 
@@ -63,20 +63,28 @@ export default async function AdminProducts() {
     }));
   }
 
+  // Filter specifically for Tools & Accessories
+  const toolRows = rows.filter(
+    (r) =>
+      (r.sizes ?? []).includes("tool") ||
+      (r.tagline ?? "").toLowerCase().includes("tool") ||
+      (r.tagline ?? "").toLowerCase().includes("accessor"),
+  );
+
   // Thumbnails need viewable URLs — resolve raw keys to presigned/local URLs.
   const coversList = await Promise.all(
-    rows.map(async (r) => ({
+    toolRows.map(async (r) => ({
       id: r.id,
       url: r.imageUrl ? await resolveImageUrl(r.imageUrl) : null,
     })),
   );
-  
+
   const coversObj: Record<number, string | null> = {};
   for (const c of coversList) {
     coversObj[c.id] = c.url;
   }
 
-  const products: AdminProductRow[] = rows.map((r) => ({
+  const products: AdminProductRow[] = toolRows.map((r) => ({
     id: r.id,
     slug: r.slug,
     name: r.name,
@@ -86,21 +94,22 @@ export default async function AdminProducts() {
     isActive: r.isActive,
     imageUrl: r.imageUrl,
     imageCount: Number(r.imageCount),
-    isTool: (r.sizes ?? []).includes("tool") || (r.tagline ?? "").toLowerCase().includes("tool"),
+    isTool: true,
   }));
 
-  const nailProducts = products.filter((p) => !p.isTool);
+  const hiddenCount = products.filter((p) => !p.isActive).length;
 
   return (
     <ProductsTable
-      initialProducts={nailProducts}
+      initialProducts={products}
       covers={coversObj}
-      mode="products"
-      title="Press-On Nails"
-      subtitle={`${nailProducts.length} nail sets · ${nailProducts.filter((p) => !p.isActive).length} hidden`}
-      newHref="/admin/products/new"
-      newButtonText="+ New Nail Set"
-      editBaseHref="/admin/products"
+      mode="tools"
+      title="Tools & Accessories"
+      subtitle={`${products.length} tools & accessories · ${hiddenCount} hidden`}
+      newHref="/admin/tools/new"
+      newButtonText="+ New Tool / Accessory"
+      editBaseHref="/admin/tools"
     />
   );
 }
+

@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/cn";
 import { useAdminToast } from "./AdminToast";
 import {
   Card,
@@ -68,9 +69,11 @@ export interface ProductImageRow {
 export default function ProductForm({
   initial,
   images: initialImages,
+  backUrl,
 }: {
   initial: ProductFormValues;
   images: ProductImageRow[];
+  backUrl?: string;
 }) {
   const router = useRouter();
   const isEdit = Boolean(initial.id);
@@ -84,6 +87,8 @@ export default function ProductForm({
   const [uploadNote, setUploadNote] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [, startTransition] = useTransition();
+
+  const returnUrl = backUrl || (values.isTool ? "/admin/tools" : "/admin/products");
 
   const set = <K extends keyof ProductFormValues>(
     key: K,
@@ -104,14 +109,14 @@ export default function ProductForm({
       description: values.description,
       price: values.price,
       compareAtPrice: values.compareAtPrice,
-      finish: values.finish as ProductInput["finish"],
+      finish: (values.isTool ? "Classic" : values.finish) as ProductInput["finish"],
       badge:
         values.badge === ""
           ? undefined
           : (values.badge as ProductInput["badge"]),
       sizes,
-      toneA: values.toneA,
-      toneB: values.toneB,
+      toneA: values.toneA || "#e8cfc4",
+      toneB: values.toneB || "#a6715c",
       isActive: values.isActive,
       sortOrder: values.sortOrder,
     };
@@ -128,16 +133,20 @@ export default function ProductForm({
       }
       if (!isEdit) {
         toast({
-          title: "Product Created",
+          title: values.isTool ? "Tool / Accessory Created" : "Product Created",
           description: `"${input.name}" was added to the catalog.`,
           type: "success",
         });
-        router.push(`/admin/products/${result.productId}`);
+        router.push(
+          values.isTool
+            ? `/admin/tools/${result.productId}`
+            : `/admin/products/${result.productId}`,
+        );
         return;
       }
       setValues((v) => ({ ...v, slug: result.slug }));
       toast({
-        title: "Product Saved",
+        title: values.isTool ? "Tool / Accessory Saved" : "Product Saved",
         description: `Changes to "${input.name}" have been saved.`,
         type: "success",
       });
@@ -250,19 +259,61 @@ export default function ProductForm({
         <CardHeader>
           <CardTitle>Product details</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-5">
-          {/* ── Product Category: Press-On Nails vs Tools & Accessories ── */}
-          <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/20">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">Tool or Accessory</Label>
-              <p className="text-xs text-muted-foreground">
-                Toggle ON to display this item in the &ldquo;Tools &amp; Accessories&rdquo; collection and home section.
-              </p>
+        <CardContent className="space-y-6">
+          {/* ── Product Category: Press-On Nails vs Nail Accessories Toggle ── */}
+          <div className="rounded-xl border border-border bg-muted/40 p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
+              <div>
+                <Label className="text-sm font-semibold tracking-wide text-foreground">
+                  Product Category
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Select whether you are adding a press-on nail set or a tool / accessory.
+                </p>
+              </div>
+              <span className="inline-flex items-center text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-secondary text-secondary-foreground w-fit">
+                {values.isTool ? "✂️ Nail Accessories" : "💅 Press-On Nails"}
+              </span>
             </div>
-            <Switch
-              checked={Boolean(values.isTool)}
-              onCheckedChange={(checked) => set("isTool", checked)}
-            />
+
+            <div className="grid grid-cols-2 gap-2 rounded-lg bg-background p-1.5 border">
+              <button
+                type="button"
+                onClick={() => {
+                  set("isTool", false);
+                  if (values.tagline === "Tools & Accessories") {
+                    set("tagline", "");
+                  }
+                }}
+                className={cn(
+                  "flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer",
+                  !values.isTool
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <span className="text-sm">💅</span>
+                <span>Press-On Nails</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  set("isTool", true);
+                  if (!values.tagline) {
+                    set("tagline", "Tools & Accessories");
+                  }
+                }}
+                className={cn(
+                  "flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer",
+                  values.isTool
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <span className="text-sm">✂️</span>
+                <span>Nail Accessories</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
@@ -272,7 +323,7 @@ export default function ProductForm({
                 id="name"
                 value={values.name}
                 onChange={(e) => set("name", e.target.value)}
-                placeholder="Rosé All Day"
+                placeholder={values.isTool ? "Magic Glue & Sticky Tabs Kit" : "Rosé All Day"}
               />
             </div>
             <div className="space-y-2">
@@ -286,7 +337,7 @@ export default function ProductForm({
                 id="slug"
                 value={values.slug}
                 onChange={(e) => set("slug", e.target.value)}
-                placeholder="rose-all-day"
+                placeholder={values.isTool ? "magic-glue-kit" : "rose-all-day"}
               />
             </div>
           </div>
@@ -297,7 +348,7 @@ export default function ProductForm({
               id="tagline"
               value={values.tagline}
               onChange={(e) => set("tagline", e.target.value)}
-              placeholder="A soft rosy shimmer for every day"
+              placeholder={values.isTool ? "Tools & Accessories" : "A soft rosy shimmer for every day"}
             />
           </div>
 
@@ -308,7 +359,7 @@ export default function ProductForm({
               rows={5}
               value={values.description}
               onChange={(e) => set("description", e.target.value)}
-              placeholder="What makes this set special…"
+              placeholder={values.isTool ? "Describe this accessory, how to use it, and kit contents…" : "What makes this set special…"}
             />
           </div>
 
@@ -345,78 +396,100 @@ export default function ProductForm({
                 }
               />
             </div>
-            <div className="space-y-2">
-              <Label>Finish *</Label>
-              <Select
-                value={values.finish}
-                onValueChange={(v) => set("finish", v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FINISH_OPTIONS.map((f) => (
-                    <SelectItem key={f.value} value={f.value}>
-                      {f.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
+            {!values.isTool ? (
+              <div className="space-y-2">
+                <Label>Finish *</Label>
+                <Select
+                  value={values.finish}
+                  onValueChange={(v) => set("finish", v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FINISH_OPTIONS.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>
+                        {f.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Badge</Label>
+                <Select
+                  value={values.badge || "none"}
+                  onValueChange={(v) => set("badge", v === "none" ? "" : v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="Bestseller">Bestseller</SelectItem>
+                    <SelectItem value="New">New</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
-          <div className="grid gap-5 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Badge</Label>
-              <Select
-                value={values.badge || "none"}
-                onValueChange={(v) => set("badge", v === "none" ? "" : v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="Bestseller">Bestseller</SelectItem>
-                  <SelectItem value="New">New</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="toneA">Fallback tone A</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="toneA"
-                  type="color"
-                  value={values.toneA}
-                  onChange={(e) => set("toneA", e.target.value)}
-                  className="h-9 w-12 cursor-pointer rounded-md border"
-                />
-                <Input
-                  value={values.toneA}
-                  onChange={(e) => set("toneA", e.target.value)}
-                  className="w-28 font-mono text-xs"
-                />
+          {!values.isTool && (
+            <div className="grid gap-5 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Badge</Label>
+                <Select
+                  value={values.badge || "none"}
+                  onValueChange={(v) => set("badge", v === "none" ? "" : v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="Bestseller">Bestseller</SelectItem>
+                    <SelectItem value="New">New</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="toneA">Fallback tone A</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="toneA"
+                    type="color"
+                    value={values.toneA}
+                    onChange={(e) => set("toneA", e.target.value)}
+                    className="h-9 w-12 cursor-pointer rounded-md border"
+                  />
+                  <Input
+                    value={values.toneA}
+                    onChange={(e) => set("toneA", e.target.value)}
+                    className="w-28 font-mono text-xs"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="toneB">Fallback tone B</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="toneB"
+                    type="color"
+                    value={values.toneB}
+                    onChange={(e) => set("toneB", e.target.value)}
+                    className="h-9 w-12 cursor-pointer rounded-md border"
+                  />
+                  <Input
+                    value={values.toneB}
+                    onChange={(e) => set("toneB", e.target.value)}
+                    className="w-28 font-mono text-xs"
+                  />
+                </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="toneB">Fallback tone B</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="toneB"
-                  type="color"
-                  value={values.toneB}
-                  onChange={(e) => set("toneB", e.target.value)}
-                  className="h-9 w-12 cursor-pointer rounded-md border"
-                />
-                <Input
-                  value={values.toneB}
-                  onChange={(e) => set("toneB", e.target.value)}
-                  className="w-28 font-mono text-xs"
-                />
-              </div>
-            </div>
-          </div>
+          )}
 
           {!values.isTool && (
             <>
@@ -613,12 +686,14 @@ export default function ProductForm({
             </>
           ) : isEdit ? (
             "Save changes"
+          ) : values.isTool ? (
+            "Create tool / accessory"
           ) : (
-            "Create product"
+            "Create nail set"
           )}
         </Button>
-        <Button type="button" variant="outline" onClick={() => router.push("/admin/products")}>
-          Done
+        <Button type="button" variant="outline" onClick={() => router.push(returnUrl)}>
+          {values.isTool ? "← Back to Tools" : "← Back to Products"}
         </Button>
       </div>
     </div>

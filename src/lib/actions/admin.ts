@@ -61,6 +61,11 @@ export async function toggleProductActive(productId: number, isActive: boolean) 
     .update(schema.products)
     .set({ isActive, updatedAt: new Date() })
     .where(eq(schema.products.id, productId));
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/tools");
+  revalidatePath("/tools-accessories");
+  revalidatePath("/shop");
+  revalidatePath("/");
 }
 
 /* ─── Product create / update / delete ─────────────────────────────── */
@@ -113,6 +118,8 @@ export async function createProduct(
     .returning({ id: schema.products.id, slug: schema.products.slug });
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/tools");
+  revalidatePath("/tools-accessories");
   revalidatePath("/shop");
   revalidatePath("/");
   return { ok: true, productId: row.id, slug: row.slug };
@@ -154,6 +161,8 @@ export async function updateProduct(
     .where(eq(schema.products.id, productId));
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/tools");
+  revalidatePath("/tools-accessories");
   revalidatePath("/shop");
   revalidatePath(`/product/${slug}`);
   revalidatePath("/");
@@ -164,6 +173,8 @@ export async function deleteProduct(productId: number) {
   await requireAdmin();
   await db.delete(schema.products).where(eq(schema.products.id, productId));
   revalidatePath("/admin/products");
+  revalidatePath("/admin/tools");
+  revalidatePath("/tools-accessories");
   revalidatePath("/shop");
   revalidatePath("/");
 }

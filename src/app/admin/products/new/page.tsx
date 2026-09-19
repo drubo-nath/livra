@@ -26,8 +26,7 @@ export default function NewProductPage() {
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">New product</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Add details, then upload images — the product is created on first save
-        or first upload.
+        Select whether you are adding Press-On Nails or Nail Accessories using the category toggle below.
       </p>
       <div className="mt-8">
         <ProductForm initial={EMPTY} images={[]} />
