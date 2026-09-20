@@ -1,12 +1,31 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { SlidersHorizontal, X, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  SlidersHorizontal,
+  X,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Minus,
+  Plus,
+} from "lucide-react";
 import type { ProductDTO, Finish } from "@/db/types";
 import { finishes, finishDisplayLabels, normalizeFinish } from "@/db/types";
+import { NAIL_SHAPES, normalizeShape } from "@/lib/shapes";
+import {
+  FILTER_COLORS,
+  FILTER_LENGTHS,
+  resolveProductColor,
+  resolveProductLength,
+  type FilterColor,
+  type FilterLength,
+} from "@/lib/filter-resolvers";
 import ProductCard from "@/components/ProductCard";
 import { cn } from "@/lib/cn";
 import { EASE } from "@/components/motion/Reveal";
@@ -15,11 +34,45 @@ type Sort = "featured" | "low" | "high";
 
 export default function ShopClient({ products }: { products: ProductDTO[] }) {
   const params = useSearchParams();
-  const [finish, setFinish] = useState<Finish | null>(() => {
-    return normalizeFinish(params.get("finish"));
+
+  // Multi-select filter states
+  const [selectedFinishes, setSelectedFinishes] = useState<Finish[]>(() => {
+    const init = normalizeFinish(params.get("finish"));
+    return init ? [init] : [];
   });
+  const [selectedShapes, setSelectedShapes] = useState<string[]>(() => {
+    const init = normalizeShape(params.get("shape"));
+    return init ? [init] : [];
+  });
+  const [selectedColors, setSelectedColors] = useState<FilterColor[]>([]);
+  const [selectedLengths, setSelectedLengths] = useState<FilterLength[]>([]);
+
   const [sort, setSort] = useState<Sort>("featured");
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
+  // Accordion open/collapse states matching Image 1
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    color: true,
+    length: true,
+    shape: true,
+    collection: true,
+  });
+
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Sync with search parameters if user navigates
+  useEffect(() => {
+    const urlShape = normalizeShape(params.get("shape"));
+    if (urlShape && !selectedShapes.includes(urlShape)) {
+      setSelectedShapes([urlShape]);
+    }
+    const urlFinish = normalizeFinish(params.get("finish"));
+    if (urlFinish && !selectedFinishes.includes(urlFinish)) {
+      setSelectedFinishes([urlFinish]);
+    }
+  }, [params]);
 
   // Lock background scroll when filter drawer is open
   useEffect(() => {
@@ -33,45 +86,123 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
     };
   }, [isFilterDrawerOpen]);
 
-  // Counts per finish category
-  const finishCounts = useMemo(() => {
-    const map: Record<string, number> = {
-      all: products.length,
+  // Enrich products with resolved attributes
+  const enrichedProducts = useMemo(() => {
+    return products.map((p) => ({
+      ...p,
+      resolvedColor: resolveProductColor(p),
+      resolvedLength: resolveProductLength(p),
+      resolvedShape: normalizeShape(p.shape) ?? p.shape,
+      resolvedFinish: normalizeFinish(p.finish) ?? p.finish,
+    }));
+  }, [products]);
+
+  // Live counts per attribute
+  const counts = useMemo(() => {
+    const colorMap: Record<string, number> = {};
+    for (const c of FILTER_COLORS) colorMap[c] = 0;
+
+    const lengthMap: Record<string, number> = {};
+    for (const l of FILTER_LENGTHS) lengthMap[l] = 0;
+
+    const shapeMap: Record<string, number> = {};
+    for (const s of NAIL_SHAPES) shapeMap[s.name] = 0;
+
+    const finishMap: Record<string, number> = {
       Exclusive: 0,
       Classic: 0,
       Signature: 0,
     };
-    for (const p of products) {
-      const norm = normalizeFinish(p.finish) ?? p.finish;
-      if (map[norm] !== undefined) {
-        map[norm]++;
-      }
-    }
-    return map;
-  }, [products]);
 
+    for (const p of enrichedProducts) {
+      if (colorMap[p.resolvedColor] !== undefined) colorMap[p.resolvedColor]++;
+      if (lengthMap[p.resolvedLength] !== undefined) lengthMap[p.resolvedLength]++;
+      if (shapeMap[p.resolvedShape] !== undefined) shapeMap[p.resolvedShape]++;
+      if (finishMap[p.resolvedFinish] !== undefined) finishMap[p.resolvedFinish]++;
+    }
+
+    return { colors: colorMap, lengths: lengthMap, shapes: shapeMap, finishes: finishMap };
+  }, [enrichedProducts]);
+
+  // Filter & Sort
   const visible = useMemo(() => {
-    const list = finish
-      ? products.filter((p) => (normalizeFinish(p.finish) ?? p.finish) === finish)
-      : [...products];
+    const list = enrichedProducts.filter((p) => {
+      if (selectedFinishes.length > 0 && !selectedFinishes.includes(p.resolvedFinish as Finish)) {
+        return false;
+      }
+      if (selectedShapes.length > 0 && !selectedShapes.includes(p.resolvedShape)) {
+        return false;
+      }
+      if (selectedColors.length > 0 && !selectedColors.includes(p.resolvedColor)) {
+        return false;
+      }
+      if (selectedLengths.length > 0 && !selectedLengths.includes(p.resolvedLength)) {
+        return false;
+      }
+      return true;
+    });
+
     if (sort === "low") list.sort((a, b) => a.price - b.price);
     if (sort === "high") list.sort((a, b) => b.price - a.price);
     return list;
-  }, [products, finish, sort]);
+  }, [enrichedProducts, selectedFinishes, selectedShapes, selectedColors, selectedLengths, sort]);
 
   const ITEMS_PER_PAGE = 12;
   const [page, setPage] = useState<number>(1);
 
-  const selectFinish = (f: Finish | null) => {
-    setFinish(f);
+  // Toggle helpers
+  const toggleFinish = (f: Finish) => {
+    setSelectedFinishes((prev) =>
+      prev.includes(f) ? prev.filter((item) => item !== f) : [...prev, f],
+    );
     setPage(1);
   };
 
-  const selectSort = (s: Sort) => {
-    setSort(s);
+  const selectSingleFinish = (f: Finish | null) => {
+    setSelectedFinishes(f ? [f] : []);
     setPage(1);
   };
 
+  const toggleShape = (s: string) => {
+    setSelectedShapes((prev) =>
+      prev.includes(s) ? prev.filter((item) => item !== s) : [...prev, s],
+    );
+    setPage(1);
+  };
+
+  const toggleColor = (c: FilterColor) => {
+    setSelectedColors((prev) =>
+      prev.includes(c) ? prev.filter((item) => item !== c) : [...prev, c],
+    );
+    setPage(1);
+  };
+
+  const toggleLength = (l: FilterLength) => {
+    setSelectedLengths((prev) =>
+      prev.includes(l) ? prev.filter((item) => item !== l) : [...prev, l],
+    );
+    setPage(1);
+  };
+
+  const resetFilters = () => {
+    setSelectedFinishes([]);
+    setSelectedShapes([]);
+    setSelectedColors([]);
+    setSelectedLengths([]);
+    setSort("featured");
+    setPage(1);
+  };
+
+  const activeFilterCount =
+    selectedFinishes.length +
+    selectedShapes.length +
+    selectedColors.length +
+    selectedLengths.length +
+    (sort !== "featured" ? 1 : 0);
+
+  const hasActiveFilters = activeFilterCount > 0;
+
+  // Pagination
   const totalPages = Math.ceil(visible.length / ITEMS_PER_PAGE);
   const currentPage = Math.min(page, Math.max(1, totalPages));
 
@@ -102,17 +233,9 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
     }
   };
 
-  const hasActiveFilters = finish !== null || sort !== "featured";
-  const activeFilterCount = (finish !== null ? 1 : 0) + (sort !== "featured" ? 1 : 0);
-
-  const resetFilters = () => {
-    setFinish(null);
-    setSort("featured");
-    setPage(1);
-  };
-
   return (
     <section className="mx-auto max-w-[1440px] px-5 pb-24 pt-10 md:px-10 md:pt-16">
+      {/* Title */}
       <motion.h1
         initial={{ opacity: 0, y: 28 }}
         animate={{ opacity: 1, y: 0 }}
@@ -132,103 +255,255 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
         elegance and style.
       </motion.p>
 
-      {/* ── Breadcrumbs & Filter Bar (sticky) ── */}
+      {/* ── Eye-Soothing Sticky Toolbar (Mobile-Optimized & Desktop Luxury) ── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
-        className="hairline sticky top-14 md:top-16 z-30 mt-8 md:mt-10 flex items-center justify-between border-y bg-bone/95 py-3.5 md:py-4 backdrop-blur-md transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        className="hairline sticky top-14 md:top-16 z-30 mt-6 sm:mt-8 md:mt-10 border-y bg-bone/95 py-2.5 sm:py-3 md:py-3.5 backdrop-blur-md transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
       >
-        {/* Left: Breadcrumbs (Matching Ersa Nails Image 2) */}
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-taupe font-normal">
-          <Link href="/" className="hover:text-ink transition-colors">
-            Home
-          </Link>
-          <span className="text-line select-none">/</span>
-          <button
-            type="button"
-            onClick={() => selectFinish(null)}
-            className="hover:text-ink transition-colors cursor-pointer"
-          >
-            Collections
-          </button>
-          <span className="text-line select-none">/</span>
-          <span className="text-ink font-medium">
-            {finish ? finishDisplayLabels[finish] : "All Products"}
-          </span>
-        </nav>
-
-        {/* Mobile: Filter Trigger Button (Matching Ersa Nails Image 2 circled button) */}
-        <div className="flex items-center gap-3 md:hidden">
-          <button
-            type="button"
-            onClick={() => setIsFilterDrawerOpen(true)}
-            className="relative flex h-9 w-9 items-center justify-center rounded-full border border-line bg-cream text-ink shadow-xs transition-all hover:border-ink cursor-pointer active:scale-95"
-            aria-label="Filter and sort products"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            {hasActiveFilters && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-clay text-[9px] font-bold text-cream">
-                {activeFilterCount}
-              </span>
+        <div className="flex items-center justify-between gap-2">
+          {/* Left: Breadcrumbs (gracefully truncated on mobile) */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 sm:gap-2 text-xs text-taupe font-normal min-w-0 max-w-[45%] sm:max-w-[40%] lg:max-w-none">
+            <Link href="/" className="hover:text-ink transition-colors shrink-0">
+              Home
+            </Link>
+            <span className="text-line select-none shrink-0">/</span>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="hover:text-ink transition-colors cursor-pointer truncate"
+            >
+              Collections
+            </button>
+            {selectedFinishes.length === 1 ? (
+              <>
+                <span className="text-line select-none shrink-0">/</span>
+                <span className="text-ink font-medium truncate">
+                  {finishDisplayLabels[selectedFinishes[0]]}
+                </span>
+              </>
+            ) : selectedShapes.length === 1 ? (
+              <>
+                <span className="text-line select-none shrink-0">/</span>
+                <span className="text-ink font-medium truncate">{selectedShapes[0]} Shape</span>
+              </>
+            ) : (
+              <>
+                <span className="text-line select-none shrink-0">/</span>
+                <span className="text-ink font-medium truncate">All</span>
+              </>
             )}
-          </button>
+          </nav>
+
+          {/* Center: Soft Luxury Collection Pills (Desktop) */}
+          <div className="hidden lg:flex items-center gap-1.5 bg-sand/35 p-1 rounded-full border border-line/50">
+            <button
+              type="button"
+              onClick={() => selectSingleFinish(null)}
+              className={cn(
+                "px-4 py-1.5 text-xs uppercase tracking-wider font-medium transition-all duration-200 rounded-full cursor-pointer",
+                selectedFinishes.length === 0
+                  ? "bg-ink text-cream shadow-2xs"
+                  : "text-taupe hover:text-ink hover:bg-sand/40",
+              )}
+            >
+              All
+            </button>
+            {finishes.map((f) => {
+              const isSelected = selectedFinishes.length === 1 && selectedFinishes[0] === f;
+              return (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => selectSingleFinish(isSelected ? null : f)}
+                  className={cn(
+                    "px-4 py-1.5 text-xs uppercase tracking-wider font-medium transition-all duration-200 rounded-full cursor-pointer",
+                    isSelected
+                      ? "bg-ink text-cream shadow-2xs"
+                      : "text-taupe hover:text-ink hover:bg-sand/40",
+                  )}
+                >
+                  {finishDisplayLabels[f]}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right: Filters Trigger & Custom Luxury Sort (Mobile + Desktop) */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Filter Button */}
+            <button
+              type="button"
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-line/70 bg-cream/90 px-3 sm:px-3.5 py-1.5 text-xs uppercase tracking-wider font-medium text-ink hover:border-ink hover:bg-cream transition-all duration-200 cursor-pointer active:scale-95 shadow-2xs"
+              aria-label="Open filters"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5 stroke-[1.75]" />
+              <span className="text-[11px] sm:text-xs">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-clay text-[9px] font-bold text-cream">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {/* Custom Sort Dropdown */}
+            <SortDropdown value={sort} onChange={(s) => setSort(s)} />
+          </div>
         </div>
 
-        {/* Desktop: Inline Filter Chips & Sort Dropdown */}
-        <div className="hidden md:flex md:items-center md:gap-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterChip active={finish === null} onClick={() => selectFinish(null)}>
-              All
-            </FilterChip>
-            {finishes.map((f) => (
-              <FilterChip key={f} active={finish === f} onClick={() => selectFinish(f)}>
+        {/* Mobile & Tablet: Horizontally Scrollable Collection Pills Bar */}
+        <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto no-scrollbar pt-2.5 pb-0.5 -mx-1 px-1 mt-1 border-t border-line/40">
+          <button
+            type="button"
+            onClick={() => selectSingleFinish(null)}
+            className={cn(
+              "shrink-0 px-3.5 py-1 text-[11px] uppercase tracking-wider font-medium transition-all duration-200 rounded-full cursor-pointer",
+              selectedFinishes.length === 0
+                ? "bg-ink text-cream shadow-2xs"
+                : "bg-sand/40 border border-line/50 text-taupe hover:text-ink",
+            )}
+          >
+            All Collections
+          </button>
+          {finishes.map((f) => {
+            const isSelected = selectedFinishes.length === 1 && selectedFinishes[0] === f;
+            return (
+              <button
+                key={`mobile-tab-${f}`}
+                type="button"
+                onClick={() => selectSingleFinish(isSelected ? null : f)}
+                className={cn(
+                  "shrink-0 px-3.5 py-1 text-[11px] uppercase tracking-wider font-medium transition-all duration-200 rounded-full cursor-pointer whitespace-nowrap",
+                  isSelected
+                    ? "bg-ink text-cream shadow-2xs"
+                    : "bg-sand/40 border border-line/50 text-taupe hover:text-ink",
+                )}
+              >
                 {finishDisplayLabels[f]}
-              </FilterChip>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-taupe border-l border-line pl-6">
-            <span className="text-[10px] uppercase tracking-wider text-taupe font-medium">Sort</span>
-            <select
-              value={sort}
-              onChange={(e) => selectSort(e.target.value as Sort)}
-              className="cursor-pointer bg-transparent text-sm text-ink outline-none"
-              aria-label="Sort products"
-            >
-              <option value="featured">Featured</option>
-              <option value="low">Price · Low to High</option>
-              <option value="high">Price · High to Low</option>
-            </select>
-          </div>
+              </button>
+            );
+          })}
         </div>
       </motion.div>
+
+      {/* ── Active Filters Chips Bar ── */}
+      {hasActiveFilters && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 flex flex-wrap items-center gap-2"
+        >
+          <span className="text-xs text-taupe font-medium mr-1">Active:</span>
+
+          {selectedShapes.map((s) => (
+            <button
+              key={`chip-shape-${s}`}
+              type="button"
+              onClick={() => toggleShape(s)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sand/60 border border-line text-ink hover:bg-sand transition-colors cursor-pointer"
+            >
+              <span>Shape: <strong>{s}</strong></span>
+              <X className="h-3 w-3" />
+            </button>
+          ))}
+
+          {selectedColors.map((c) => (
+            <button
+              key={`chip-color-${c}`}
+              type="button"
+              onClick={() => toggleColor(c)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sand/60 border border-line text-ink hover:bg-sand transition-colors cursor-pointer"
+            >
+              <span>Color: <strong>{c}</strong></span>
+              <X className="h-3 w-3" />
+            </button>
+          ))}
+
+          {selectedLengths.map((l) => (
+            <button
+              key={`chip-length-${l}`}
+              type="button"
+              onClick={() => toggleLength(l)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sand/60 border border-line text-ink hover:bg-sand transition-colors cursor-pointer"
+            >
+              <span>Length: <strong>{l}</strong></span>
+              <X className="h-3 w-3" />
+            </button>
+          ))}
+
+          {selectedFinishes.map((f) => (
+            <button
+              key={`chip-finish-${f}`}
+              type="button"
+              onClick={() => toggleFinish(f)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sand/60 border border-line text-ink hover:bg-sand transition-colors cursor-pointer"
+            >
+              <span>Collection: <strong>{finishDisplayLabels[f]}</strong></span>
+              <X className="h-3 w-3" />
+            </button>
+          ))}
+
+          {sort !== "featured" && (
+            <button
+              type="button"
+              onClick={() => setSort("featured")}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sand/60 border border-line text-ink hover:bg-sand transition-colors cursor-pointer"
+            >
+              <span>Sort: <strong>{sort === "low" ? "Price Low-High" : "Price High-Low"}</strong></span>
+              <X className="h-3 w-3" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="text-xs text-taupe underline hover:text-ink ml-2 cursor-pointer"
+          >
+            Clear all
+          </button>
+        </motion.div>
+      )}
 
       {/* ── Anchor for smooth scroll ── */}
       <div id="products-grid-top" className="scroll-mt-32" />
 
-      {/* ── Product Grid ── */}
-      <motion.div layout className="mt-8 md:mt-12 grid grid-cols-2 gap-x-4 gap-y-10 md:gap-x-6 md:gap-y-12 lg:grid-cols-4">
-        {paginatedProducts.map((p, i) => (
-          <motion.div
-            key={p.slug}
-            initial={{ opacity: 0, y: 32 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.15 }}
-            transition={{ duration: 0.8, ease: EASE, delay: (i % 4) * 0.06 }}
+      {/* ── Product Grid or Empty State ── */}
+      {visible.length === 0 ? (
+        <div className="mt-14 py-16 text-center border border-line/60 rounded-xl bg-sand/20 px-4">
+          <p className="font-serif text-2xl text-ink">No matching shades found</p>
+          <p className="mt-2 text-sm text-taupe">Try adjusting or clearing your filters.</p>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="mt-6 px-6 py-2.5 bg-ink text-cream text-xs uppercase tracking-wider font-semibold hover:bg-clay transition-colors cursor-pointer rounded-sm"
           >
-            <ProductCard product={p} />
-          </motion.div>
-        ))}
-      </motion.div>
+            Reset Filters
+          </button>
+        </div>
+      ) : (
+        <motion.div layout className="mt-8 md:mt-12 grid grid-cols-2 gap-x-4 gap-y-10 md:gap-x-6 md:gap-y-12 lg:grid-cols-4">
+          {paginatedProducts.map((p, i) => (
+            <motion.div
+              key={p.slug}
+              initial={{ opacity: 0, y: 32 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.8, ease: EASE, delay: (i % 4) * 0.06 }}
+            >
+              <ProductCard product={p} />
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
 
-      {/* ── Minimalist Luxury Pagination Bar (Matching Reference) ── */}
+      {/* ── Minimalist Luxury Pagination Bar ── */}
       {totalPages > 1 && (
         <nav
           aria-label="Product pagination"
-          className="mt-14 md:mt-20 flex items-center justify-center gap-6 sm:gap-8 font-sans select-none"
+          className="mt-12 md:mt-20 flex items-center justify-center gap-3 sm:gap-8 font-sans select-none px-2"
         >
-          {/* Previous Page Arrow */}
           <button
             type="button"
             onClick={() => handlePageChange(currentPage - 1)}
@@ -241,14 +516,13 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
             <ChevronLeft className="h-4 w-4 stroke-[1.75]" />
           </button>
 
-          {/* Page Numbers & Ellipsis */}
-          <div className="flex items-center gap-5 sm:gap-7">
+          <div className="flex items-center gap-2.5 sm:gap-7">
             {paginationItems.map((item, idx) => {
               if (item === "...") {
                 return (
                   <span
                     key={`ellipsis-${idx}`}
-                    className="text-sm sm:text-base text-taupe/60 cursor-default select-none px-1 tracking-wider"
+                    className="text-xs sm:text-base text-taupe/60 cursor-default select-none px-0.5 sm:px-1 tracking-wider"
                   >
                     ...
                   </span>
@@ -263,10 +537,10 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
                   onClick={() => handlePageChange(item as number)}
                   aria-current={isCurrent ? "page" : undefined}
                   className={cn(
-                    "relative pb-1 transition-colors cursor-pointer text-sm sm:text-base font-normal tracking-wider",
+                    "relative pb-1 transition-colors cursor-pointer text-xs sm:text-base font-normal tracking-wider px-1",
                     isCurrent
                       ? "text-ink font-medium"
-                      : "text-taupe hover:text-ink"
+                      : "text-taupe hover:text-ink",
                   )}
                 >
                   {item}
@@ -282,7 +556,6 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
             })}
           </div>
 
-          {/* Next Page Arrow */}
           <button
             type="button"
             onClick={() => handlePageChange(currentPage + 1)}
@@ -303,10 +576,10 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
           : `${visible.length} shades`}
       </p>
 
-      {/* ── Mobile Filter & Sort Drawer ── */}
+      {/* ── Filter Drawer (Accordion & Checkboxes matching Image 1) ── */}
       <AnimatePresence>
         {isFilterDrawerOpen && (
-          <div className="fixed inset-0 z-50 md:hidden">
+          <div className="fixed inset-0 z-50">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -317,21 +590,21 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
               className="absolute inset-0 bg-ink/50 backdrop-blur-xs"
             />
 
-            {/* Slide-out Sheet (from bottom on mobile) */}
+            {/* Slide-out Sheet (Right sidebar on desktop, bottom sheet on mobile) */}
             <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-x-0 bottom-0 max-h-[85vh] flex flex-col rounded-t-2xl border-t border-line bg-cream shadow-2xl overflow-hidden"
+              className="absolute inset-y-0 right-0 w-full sm:w-[380px] md:w-[400px] flex flex-col border-l border-line bg-cream shadow-2xl overflow-hidden"
             >
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-line px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-bold tracking-[0.2em] text-ink uppercase">
-                    Filter &amp; Sort
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between border-b border-line px-6 py-4 bg-cream">
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-xs font-bold tracking-[0.22em] text-ink uppercase">
+                    Filters
                   </h2>
-                  {hasActiveFilters && (
+                  {activeFilterCount > 0 && (
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-clay text-[10px] font-bold text-cream">
                       {activeFilterCount}
                     </span>
@@ -347,111 +620,95 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
                 </button>
               </div>
 
-              {/* Drawer Content Body */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-7 text-sm">
-                {/* Collection / Finish Section */}
-                <div className="space-y-3">
-                  <p className="text-xs tracking-[0.2em] text-taupe uppercase font-semibold">
-                    Collection / Finish
-                  </p>
-                  <div className="space-y-1.5">
-                    <button
-                      type="button"
-                      onClick={() => selectFinish(null)}
-                      className={cn(
-                        "flex w-full items-center justify-between px-4 py-3 rounded-lg border transition-all cursor-pointer text-left",
-                        finish === null
-                          ? "border-ink bg-sand/30 font-medium text-ink"
-                          : "border-line/60 bg-transparent text-taupe hover:text-ink"
-                      )}
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <span
-                          className={cn(
-                            "flex h-4 w-4 items-center justify-center rounded-full border text-[10px]",
-                            finish === null ? "border-ink bg-ink text-cream" : "border-line"
-                          )}
-                        >
-                          {finish === null && <Check className="h-3 w-3 stroke-[3]" />}
-                        </span>
-                        <span>All Products</span>
-                      </span>
-                      <span className="text-xs text-taupe/80">{finishCounts.all}</span>
-                    </button>
+              {/* Drawer Accordion Body (Matching Image 1) */}
+              <div className="flex-1 overflow-y-auto px-6 py-2 text-sm divide-y divide-transparent">
+                {/* 1. COLOR Section (Image 1 top section) */}
+                <FilterAccordionSection
+                  title="COLOR"
+                  isOpen={Boolean(openSections.color)}
+                  onToggle={() => toggleSection("color")}
+                >
+                  {FILTER_COLORS.map((color) => {
+                    const isChecked = selectedColors.includes(color);
+                    return (
+                      <FilterCheckboxItem
+                        key={color}
+                        label={color}
+                        checked={isChecked}
+                        count={counts.colors[color] ?? 0}
+                        onClick={() => toggleColor(color)}
+                      />
+                    );
+                  })}
+                </FilterAccordionSection>
 
-                    {finishes.map((f) => {
-                      const isSelected = finish === f;
-                      return (
-                        <button
-                          key={f}
-                          type="button"
-                          onClick={() => selectFinish(f)}
-                          className={cn(
-                            "flex w-full items-center justify-between px-4 py-3 rounded-lg border transition-all cursor-pointer text-left",
-                            isSelected
-                              ? "border-ink bg-sand/30 font-medium text-ink"
-                              : "border-line/60 bg-transparent text-taupe hover:text-ink"
-                          )}
-                        >
-                          <span className="flex items-center gap-2.5">
-                            <span
-                              className={cn(
-                                "flex h-4 w-4 items-center justify-center rounded-full border text-[10px]",
-                                isSelected ? "border-ink bg-ink text-cream" : "border-line"
-                              )}
-                            >
-                              {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
-                            </span>
-                            <span>{finishDisplayLabels[f]}</span>
-                          </span>
-                          <span className="text-xs text-taupe/80">{finishCounts[f] ?? 0}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* 2. LENGTH Section (Image 1 bottom section) */}
+                <FilterAccordionSection
+                  title="LENGTH"
+                  isOpen={Boolean(openSections.length)}
+                  onToggle={() => toggleSection("length")}
+                >
+                  {FILTER_LENGTHS.map((length) => {
+                    const isChecked = selectedLengths.includes(length);
+                    return (
+                      <FilterCheckboxItem
+                        key={length}
+                        label={length}
+                        checked={isChecked}
+                        count={counts.lengths[length] ?? 0}
+                        onClick={() => toggleLength(length)}
+                      />
+                    );
+                  })}
+                </FilterAccordionSection>
 
-                {/* Sort Section */}
-                <div className="space-y-3 border-t border-line/60 pt-5">
-                  <p className="text-xs tracking-[0.2em] text-taupe uppercase font-semibold">
-                    Sort By
-                  </p>
-                  <div className="space-y-1.5">
-                    {[
-                      { key: "featured" as Sort, label: "Featured" },
-                      { key: "low" as Sort, label: "Price: Low to High" },
-                      { key: "high" as Sort, label: "Price: High to Low" },
-                    ].map((item) => {
-                      const isSelected = sort === item.key;
-                      return (
-                        <button
-                          key={item.key}
-                          type="button"
-                          onClick={() => selectSort(item.key)}
-                          className={cn(
-                            "flex w-full items-center justify-between px-4 py-3 rounded-lg border transition-all cursor-pointer text-left",
-                            isSelected
-                              ? "border-ink bg-sand/30 font-medium text-ink"
-                              : "border-line/60 bg-transparent text-taupe hover:text-ink"
-                          )}
-                        >
-                          <span>{item.label}</span>
-                          <span
-                            className={cn(
-                              "flex h-4 w-4 items-center justify-center rounded-full border text-[10px]",
-                              isSelected ? "border-ink bg-ink text-cream" : "border-line"
-                            )}
-                          >
-                            {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* 3. SHAPE Section */}
+                <FilterAccordionSection
+                  title="SHAPE"
+                  isOpen={Boolean(openSections.shape)}
+                  onToggle={() => toggleSection("shape")}
+                >
+                  {NAIL_SHAPES.map((shape) => {
+                    const isChecked = selectedShapes.includes(shape.name);
+                    return (
+                      <FilterCheckboxItem
+                        key={shape.id}
+                        label={shape.name}
+                        checked={isChecked}
+                        count={shape.available ? (counts.shapes[shape.name] ?? 0) : undefined}
+                        disabled={!shape.available}
+                        badge={!shape.available ? "Soon" : undefined}
+                        icon={shape.image}
+                        onClick={() => {
+                          if (shape.available) toggleShape(shape.name);
+                        }}
+                      />
+                    );
+                  })}
+                </FilterAccordionSection>
+
+                {/* 4. COLLECTION Section */}
+                <FilterAccordionSection
+                  title="COLLECTION"
+                  isOpen={Boolean(openSections.collection)}
+                  onToggle={() => toggleSection("collection")}
+                >
+                  {finishes.map((f) => {
+                    const isChecked = selectedFinishes.includes(f);
+                    return (
+                      <FilterCheckboxItem
+                        key={f}
+                        label={finishDisplayLabels[f]}
+                        checked={isChecked}
+                        count={counts.finishes[f] ?? 0}
+                        onClick={() => toggleFinish(f)}
+                      />
+                    );
+                  })}
+                </FilterAccordionSection>
               </div>
 
-              {/* Footer Actions */}
+              {/* Drawer Footer Actions */}
               <div className="border-t border-line bg-sand/20 px-6 py-4 flex items-center gap-3">
                 <button
                   type="button"
@@ -466,7 +723,7 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
                   onClick={() => setIsFilterDrawerOpen(false)}
                   className="flex-2 py-3 px-4 bg-ink text-xs uppercase tracking-wider font-semibold text-cream hover:bg-clay transition-colors cursor-pointer text-center rounded-lg shadow-sm"
                 >
-                  View {visible.length} Products
+                  View {visible.length} Shades
                 </button>
               </div>
             </motion.div>
@@ -477,26 +734,200 @@ export default function ShopClient({ products }: { products: ProductDTO[] }) {
   );
 }
 
-function FilterChip({
-  active,
-  onClick,
+/* ── Custom Luxury Sort Dropdown (Zero Native OS Blue) ── */
+function SortDropdown({
+  value,
+  onChange,
+}: {
+  value: Sort;
+  onChange: (s: Sort) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const labels: Record<Sort, string> = {
+    featured: "Featured",
+    low: "Price: Low to High",
+    high: "Price: High to Low",
+  };
+
+  return (
+    <div ref={ref} className="hidden md:block relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1 sm:gap-1.5 rounded-full border border-line/70 bg-cream/90 px-2.5 sm:px-3.5 py-1.5 text-xs uppercase tracking-wider font-medium text-ink hover:border-ink hover:bg-cream transition-all duration-200 cursor-pointer active:scale-95 shadow-2xs shrink-0"
+        aria-expanded={isOpen}
+        aria-label="Sort options"
+      >
+        <span className="hidden sm:inline text-[10px] text-taupe/70 font-normal">Sort:</span>
+        <span className="text-ink font-medium text-[11px] sm:text-xs truncate max-w-[85px] sm:max-w-none">
+          {labels[value]}
+        </span>
+        <ChevronDown
+          className={cn("h-3 w-3 stroke-[2] text-taupe transition-transform duration-200 shrink-0", isOpen && "rotate-180")}
+        />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            transition={{ duration: 0.16, ease: EASE }}
+            className="absolute right-0 top-full mt-2 w-44 sm:w-48 max-w-[calc(100vw-2rem)] rounded-xl border border-line/80 bg-cream/98 backdrop-blur-md p-1.5 shadow-xl z-50 overflow-hidden"
+          >
+            {(["featured", "low", "high"] as Sort[]).map((key) => {
+              const isSelected = value === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    onChange(key);
+                    setIsOpen(false);
+                  }}
+                  className={cn(
+                    "flex w-full items-center justify-between px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer text-left active:bg-sand/40",
+                    isSelected
+                      ? "bg-sand/60 text-ink font-medium"
+                      : "text-taupe hover:text-ink hover:bg-sand/30",
+                  )}
+                >
+                  <span>{labels[key]}</span>
+                  {isSelected && <Check className="h-3.5 w-3.5 stroke-[2.5] text-ink" />}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ── Accordion Filter Section (Matching Image 1) ── */
+function FilterAccordionSection({
+  title,
+  isOpen,
+  onToggle,
   children,
 }: {
-  active: boolean;
-  onClick: () => void;
+  title: string;
+  isOpen: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
 }) {
   return (
+    <div className="border-b border-line/60 pb-5 pt-4">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between py-1 text-left cursor-pointer group select-none min-h-[40px]"
+      >
+        <span className="font-sans text-xs tracking-[0.2em] font-semibold text-ink uppercase">
+          {title}
+        </span>
+        <span className="text-taupe group-hover:text-ink transition-colors flex items-center justify-center p-1">
+          {isOpen ? <Minus className="h-3.5 w-3.5 stroke-[1.75]" /> : <Plus className="h-3.5 w-3.5 stroke-[1.75]" />}
+        </span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="pt-2 space-y-1">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ── Checkbox Item (Touch-friendly 44px min-target matching Image 1) ── */
+function FilterCheckboxItem({
+  label,
+  checked,
+  count,
+  disabled,
+  badge,
+  icon,
+  onClick,
+}: {
+  label: string;
+  checked: boolean;
+  count?: number;
+  disabled?: boolean;
+  badge?: string;
+  icon?: string;
+  onClick: () => void;
+}) {
+  return (
     <button
+      type="button"
+      disabled={disabled}
       onClick={onClick}
       className={cn(
-        "text-xs uppercase tracking-wider font-medium border px-5 py-2.5 transition-all duration-300",
-        active
-          ? "border-ink bg-ink text-cream"
-          : "border-line bg-transparent text-taupe hover:border-ink hover:text-ink",
+        "flex w-full items-center justify-between text-left cursor-pointer group select-none py-2 px-2 -mx-2 rounded-lg transition-colors active:bg-sand/35 hover:bg-sand/20 min-h-[42px]",
+        disabled && "opacity-50 cursor-not-allowed",
       )}
     >
-      {children}
+      <div className="flex items-center gap-3">
+        {/* Rounded square checkbox matching Image 1 */}
+        <div
+          className={cn(
+            "flex h-4 w-4 shrink-0 items-center justify-center rounded-[3.5px] border transition-all duration-150",
+            checked
+              ? "border-ink bg-ink text-cream"
+              : "border-line/90 bg-cream/70 group-hover:border-ink/70",
+          )}
+        >
+          {checked && <Check className="h-3 w-3 stroke-[3]" />}
+        </div>
+
+        {/* Thumbnail icon if available (e.g. nail shape silhouette) */}
+        {icon && (
+          <div className="relative w-3.5 h-5 shrink-0 opacity-80">
+            <Image src={icon} alt={label} fill className="object-contain" />
+          </div>
+        )}
+
+        <span
+          className={cn(
+            "text-sm tracking-wide transition-colors",
+            checked ? "text-ink font-medium" : "text-ink/80 group-hover:text-ink font-normal",
+          )}
+        >
+          {label}
+        </span>
+      </div>
+
+      {badge ? (
+        <span className="text-[9px] uppercase tracking-widest text-taupe bg-sand/60 border border-line/60 px-1.5 py-0.5 rounded-full font-medium">
+          {badge}
+        </span>
+      ) : count !== undefined ? (
+        <span className="text-xs text-taupe/60 font-sans">{count}</span>
+      ) : null}
     </button>
   );
 }

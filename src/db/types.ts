@@ -31,6 +31,8 @@ export interface ProductDTO {
   badge: "Bestseller" | "New" | null;
   tones: [string, string];
   imageUrl: string | null;
+  /** Press-on nail shape (Almond, Coffin, Oval, Squoval, Square) */
+  shape: string;
   /** Admin-configured sizes; empty means the standard XS–L range. */
   sizes: string[];
   /** Gallery ordered by position; index 0 is the cover. */

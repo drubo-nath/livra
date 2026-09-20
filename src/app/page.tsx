@@ -1,7 +1,8 @@
 import HeroCarousel from "@/components/home/HeroCarousel";
 import Bestsellers from "@/components/home/Bestsellers";
-import ToolsSection from "@/components/home/ToolsSection";
 import Ritual from "@/components/home/Ritual";
+import ShopByShape from "@/components/home/ShopByShape";
+import ToolsSection from "@/components/home/ToolsSection";
 import { listTools } from "@/db/queries";
 
 export default async function Home() {
@@ -12,6 +13,7 @@ export default async function Home() {
       <HeroCarousel />
       <Bestsellers />
       <Ritual />
+      <ShopByShape />
       <ToolsSection tools={tools} />
     </>
   );

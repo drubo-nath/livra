@@ -4,6 +4,7 @@ import { db, isDbConfigured, schema } from "./index";
 import { productSeeds, reviewSeeds, contentSeeds } from "./seed-data";
 import { normalizeFinish, type ProductDTO, type ReviewDTO } from "./types";
 import { resolveImageUrl } from "@/lib/storage";
+import { resolveProductShape } from "@/lib/shapes";
 
 export type { ProductDTO, ReviewDTO, Finish } from "./types";
 export { finishes, finishDisplayLabels, normalizeFinish } from "./types";
@@ -60,6 +61,7 @@ function toDTO(
     badge: r.badge,
     tones: [r.toneA, r.toneB],
     imageUrl: cover,
+    shape: resolveProductShape(r),
     sizes: r.sizes?.length ? r.sizes : DEFAULT_SIZES,
     images: images.length ? images : cover ? [cover] : [],
   };
@@ -77,6 +79,7 @@ function seedToDTO(s: (typeof productSeeds)[number]): ProductDTO {
     badge: (s.badge as ProductDTO["badge"]) ?? null,
     tones: [s.toneA, s.toneB],
     imageUrl: s.imageUrl ?? null,
+    shape: resolveProductShape(s),
     sizes: s.sizes?.length ? s.sizes : DEFAULT_SIZES,
     images: s.imageUrl ? [s.imageUrl] : [],
   };
@@ -98,15 +101,25 @@ async function resolveCoverFallback(
   return covers;
 }
 
+async function withTimeout<T>(promise: Promise<T>, ms = 6000): Promise<T> {
+  let timer: NodeJS.Timeout;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Query timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /** Request-memoized via React cache(); falls back to seed data pre-setup. */
 export const listProducts = cache(async (): Promise<ProductDTO[]> => {
   if (!isDbConfigured) return productSeeds.map(seedToDTO);
   try {
-    const rows = await db
-      .select()
-      .from(schema.products)
-      .where(eq(schema.products.isActive, true))
-      .orderBy(asc(schema.products.sortOrder));
+    const rows = await withTimeout(
+      db
+        .select()
+        .from(schema.products)
+        .where(eq(schema.products.isActive, true))
+        .orderBy(asc(schema.products.sortOrder)),
+    );
     const images = await attachImages(rows);
     const covers = await resolveCoverFallback(rows, images);
     return rows.map((r) => toDTO(r, images.get(r.id) ?? [], covers.get(r.id)));
@@ -169,12 +182,14 @@ export const listBrandReviews = cache(async (): Promise<ReviewDTO[]> => {
   if (!isDbConfigured)
     return reviewSeeds.map((r, i) => ({ id: i + 1, ...r }));
   try {
-    const rows = await db
-      .select()
-      .from(schema.reviews)
-      .where(eq(schema.reviews.isApproved, true))
-      .orderBy(desc(schema.reviews.createdAt))
-      .limit(6);
+    const rows = await withTimeout(
+      db
+        .select()
+        .from(schema.reviews)
+        .where(eq(schema.reviews.isApproved, true))
+        .orderBy(desc(schema.reviews.createdAt))
+        .limit(6),
+    );
     return rows.filter((r) => r.productId === null);
   } catch (e) {
     console.error("[db] listBrandReviews failed:", e);
@@ -192,11 +207,13 @@ function contentFallback(key: string): string[] {
 export const getContentList = cache(async (key: string): Promise<string[]> => {
   if (!isDbConfigured) return contentFallback(key);
   try {
-    const rows = await db
-      .select()
-      .from(schema.siteContent)
-      .where(eq(schema.siteContent.key, key))
-      .limit(1);
+    const rows = await withTimeout(
+      db
+        .select()
+        .from(schema.siteContent)
+        .where(eq(schema.siteContent.key, key))
+        .limit(1),
+    );
     const v = rows[0]?.value;
     return Array.isArray(v) ? (v as string[]) : contentFallback(key);
   } catch (e) {
