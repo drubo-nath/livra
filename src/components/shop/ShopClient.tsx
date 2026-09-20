@@ -758,7 +758,7 @@ function SortDropdown({
   const labels: Record<Sort, string> = {
     featured: "Featured",
     low: "Price: Low to High",
-    high: "Price: High to Low",
+    high: "Price: High to Low", 
   };
 
   return (
@@ -906,7 +906,7 @@ function FilterCheckboxItem({
 
         {/* Thumbnail icon if available (e.g. nail shape silhouette) */}
         {icon && (
-          <div className="relative w-3.5 h-5 shrink-0 opacity-80">
+          <div className="relative w-5 h-5 shrink-0 opacity-85">
             <Image src={icon} alt={label} fill className="object-contain" />
           </div>
         )}

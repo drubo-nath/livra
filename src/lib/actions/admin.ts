@@ -98,6 +98,17 @@ export async function createProduct(
 
   const slug = await uniqueSlug(d.slug || slugify(d.name));
 
+  const baseSizes = (d.sizes ?? []).filter((s) => !s.includes(":"));
+  const isTool = baseSizes.includes("tool") || (d.tagline ?? "").toLowerCase().includes("tool");
+  const storedSizes = isTool
+    ? ["tool"]
+    : [
+        ...baseSizes,
+        ...(d.shape ? [`shape:${d.shape}`] : []),
+        ...(d.color ? [`color:${d.color}`] : []),
+        ...(d.length ? [`length:${d.length}`] : []),
+      ];
+
   const [row] = await db
     .insert(schema.products)
     .values({
@@ -109,7 +120,7 @@ export async function createProduct(
       compareAtPrice: d.compareAtPrice ?? null,
       finish: d.finish,
       badge: d.badge && d.badge !== "none" ? d.badge : null,
-      sizes: d.sizes?.length ? d.sizes : null,
+      sizes: storedSizes.length ? storedSizes : null,
       toneA: d.toneA ?? "#e8cfc4",
       toneB: d.toneB ?? "#a6715c",
       isActive: d.isActive ?? true,
@@ -140,6 +151,17 @@ export async function updateProduct(
 
   const slug = await uniqueSlug(d.slug || slugify(d.name), productId);
 
+  const baseSizes = (d.sizes ?? []).filter((s) => !s.includes(":"));
+  const isTool = baseSizes.includes("tool") || (d.tagline ?? "").toLowerCase().includes("tool");
+  const storedSizes = isTool
+    ? ["tool"]
+    : [
+        ...baseSizes,
+        ...(d.shape ? [`shape:${d.shape}`] : []),
+        ...(d.color ? [`color:${d.color}`] : []),
+        ...(d.length ? [`length:${d.length}`] : []),
+      ];
+
   await db
     .update(schema.products)
     .set({
@@ -151,7 +173,7 @@ export async function updateProduct(
       compareAtPrice: d.compareAtPrice ?? null,
       finish: d.finish,
       badge: d.badge && d.badge !== "none" ? d.badge : null,
-      sizes: d.sizes?.length ? d.sizes : null,
+      sizes: storedSizes.length ? storedSizes : null,
       toneA: d.toneA ?? "#e8cfc4",
       toneB: d.toneB ?? "#a6715c",
       isActive: d.isActive ?? true,

@@ -31,7 +31,19 @@ export const productSchema = z.object({
     z.enum(["Exclusive", "Classic", "Signature"])
   ),
   badge: z.enum(["Bestseller", "New", "none"]).optional(),
-  sizes: z.array(z.string().trim().min(1).max(12)).max(12).optional(),
+  shape: z
+    .enum(["Almond", "Coffin", "Oval", "Squoval", "Square"])
+    .optional()
+    .or(z.literal("")),
+  color: z
+    .enum(["Black", "Gold", "Nude", "Pink", "Red", "Silver", "Yellow"])
+    .optional()
+    .or(z.literal("")),
+  length: z
+    .enum(["Extra-long", "Long", "Short"])
+    .optional()
+    .or(z.literal("")),
+  sizes: z.array(z.string().trim().min(1).max(24)).max(24).optional(),
   toneA: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Hex color").optional(),
   toneB: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Hex color").optional(),
   isActive: z.boolean().optional(),

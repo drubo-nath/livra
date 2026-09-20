@@ -34,8 +34,8 @@ function makeClient(): ReturnType<typeof postgres> {
   return postgres(url, {
     prepare: false,
     max: 1,
-    connect_timeout: 4,
-    idle_timeout: 5,
+    connect_timeout: 8,
+    idle_timeout: 10,
   });
 }
 

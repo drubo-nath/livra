@@ -3,6 +3,8 @@ import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { resolveImageUrl } from "@/lib/storage";
 import { normalizeFinish } from "@/db/types";
+import { resolveProductShape } from "@/lib/shapes";
+import { resolveProductColor, resolveProductLength } from "@/lib/filter-resolvers";
 import ProductForm, {
   type ProductFormValues,
 } from "@/components/admin/ProductForm";
@@ -78,6 +80,14 @@ export default async function EditProductPage({
     })),
   );
 
+  const shapeTag = (row.sizes ?? []).find((s) => s.startsWith("shape:"))?.replace("shape:", "");
+  const colorTag = (row.sizes ?? []).find((s) => s.startsWith("color:"))?.replace("color:", "");
+  const lengthTag = (row.sizes ?? []).find((s) => s.startsWith("length:"))?.replace("length:", "");
+
+  const shape = shapeTag || resolveProductShape(row);
+  const color = colorTag || resolveProductColor(row);
+  const length = lengthTag || resolveProductLength({ ...row, shape });
+
   const initial: ProductFormValues = {
     id: row.id,
     name: row.name,
@@ -88,7 +98,10 @@ export default async function EditProductPage({
     compareAtPrice: row.compareAtPrice,
     finish: normalizeFinish(row.finish) ?? "Exclusive",
     badge: row.badge ?? "",
-    sizes: row.sizes ?? [],
+    shape,
+    color,
+    length,
+    sizes: (row.sizes ?? []).filter((s) => !s.includes(":")),
     toneA: row.toneA,
     toneB: row.toneB,
     isActive: row.isActive,

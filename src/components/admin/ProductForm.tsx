@@ -43,6 +43,30 @@ const FINISH_OPTIONS = [
 ] as const;
 const SIZE_OPTIONS = ["XS", "S", "M", "L"];
 
+export const SHAPE_OPTIONS = [
+  { value: "Almond", label: "Almond", icon: "/shapes/almond.png" },
+  { value: "Coffin", label: "Coffin", icon: "/shapes/coffin.png" },
+  { value: "Oval", label: "Oval", icon: "/shapes/oval.png" },
+  { value: "Squoval", label: "Squoval", icon: "/shapes/squoval.png" },
+  { value: "Square", label: "Square (Coming Soon)", icon: "/shapes/square.png" },
+] as const;
+
+export const COLOR_OPTIONS = [
+  { value: "Nude", label: "Nude", dot: "#e8cfc4" },
+  { value: "Pink", label: "Pink", dot: "#f2d5d0" },
+  { value: "Red", label: "Red", dot: "#b1453a" },
+  { value: "Gold", label: "Gold", dot: "#e6c387" },
+  { value: "Silver", label: "Silver", dot: "#d1d5db" },
+  { value: "Black", label: "Black", dot: "#27272a" },
+  { value: "Yellow", label: "Yellow", dot: "#fef08a" },
+] as const;
+
+export const LENGTH_OPTIONS = [
+  { value: "Short", label: "Short" },
+  { value: "Long", label: "Long" },
+  { value: "Extra-long", label: "Extra-long" },
+] as const;
+
 export interface ProductFormValues {
   id?: number;
   name: string;
@@ -53,6 +77,9 @@ export interface ProductFormValues {
   compareAtPrice: number | null;
   finish: string;
   badge: string;
+  shape?: string;
+  color?: string;
+  length?: string;
   sizes: string[];
   toneA: string;
   toneB: string;
@@ -114,6 +141,9 @@ export default function ProductForm({
         values.badge === ""
           ? undefined
           : (values.badge as ProductInput["badge"]),
+      shape: values.isTool ? undefined : ((values.shape || "Almond") as ProductInput["shape"]),
+      color: values.isTool ? undefined : ((values.color || "Pink") as ProductInput["color"]),
+      length: values.isTool ? undefined : ((values.length || "Long") as ProductInput["length"]),
       sizes,
       toneA: values.toneA || "#e8cfc4",
       toneB: values.toneB || "#a6715c",
@@ -494,6 +524,90 @@ export default function ProductForm({
           {!values.isTool && (
             <>
               <Separator />
+              <div className="space-y-4 rounded-xl border bg-muted/25 p-4 sm:p-5">
+                <div>
+                  <h3 className="text-sm font-semibold tracking-wide text-foreground">
+                    Nail Properties
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Specify the press-on shape, color category, and length for store filtering.
+                  </p>
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-3">
+                  {/* Shape */}
+                  <div className="space-y-2">
+                    <Label>Shape *</Label>
+                    <Select
+                      value={values.shape || "Almond"}
+                      onValueChange={(v) => set("shape", v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SHAPE_OPTIONS.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            <div className="flex items-center gap-2.5">
+                              <span className="relative w-5 h-5 shrink-0 inline-block opacity-85">
+                                <Image src={s.icon} alt={s.label} fill className="object-contain" />
+                              </span>
+                              <span>{s.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Primary Color */}
+                  <div className="space-y-2">
+                    <Label>Primary Color *</Label>
+                    <Select
+                      value={values.color || "Pink"}
+                      onValueChange={(v) => set("color", v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COLOR_OPTIONS.map((c) => (
+                          <SelectItem key={c.value} value={c.value}>
+                            <div className="flex items-center gap-2.5">
+                              <span
+                                className="h-3.5 w-3.5 rounded-full border border-black/15 shrink-0 shadow-2xs"
+                                style={{ backgroundColor: c.dot }}
+                              />
+                              <span>{c.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Length */}
+                  <div className="space-y-2">
+                    <Label>Length *</Label>
+                    <Select
+                      value={values.length || "Long"}
+                      onValueChange={(v) => set("length", v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LENGTH_OPTIONS.map((l) => (
+                          <SelectItem key={l.value} value={l.value}>
+                            {l.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label>Available sizes</Label>
                 <div className="flex flex-wrap gap-2">
@@ -708,9 +822,12 @@ function toInput(v: ProductFormValues): ProductInput {
     description: v.description,
     price: v.price,
     compareAtPrice: v.compareAtPrice,
-    finish: v.finish as ProductInput["finish"],
+    finish: (v.isTool ? "Classic" : v.finish) as ProductInput["finish"],
     badge:
       v.badge === "" ? undefined : (v.badge as ProductInput["badge"]),
+    shape: v.isTool ? undefined : ((v.shape || "Almond") as ProductInput["shape"]),
+    color: v.isTool ? undefined : ((v.color || "Pink") as ProductInput["color"]),
+    length: v.isTool ? undefined : ((v.length || "Long") as ProductInput["length"]),
     sizes: v.sizes,
     toneA: v.toneA,
     toneB: v.toneB,

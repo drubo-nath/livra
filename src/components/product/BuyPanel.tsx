@@ -49,6 +49,36 @@ export default function BuyPanel({ product }: { product: ProductDTO }) {
         {product.description}
       </p>
 
+      {/* Nail Specifications (Shape, Color, Length, Finish) */}
+      {!product.sizes.includes("tool") && (
+        <div className="mt-6 flex flex-wrap items-center gap-2 pt-4 border-t border-line/60">
+          {product.shape && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sand/50 text-ink border border-line/60">
+              <span className="text-taupe text-[11px] font-normal">Shape:</span>
+              <span>{product.shape}</span>
+            </span>
+          )}
+          {product.color && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sand/50 text-ink border border-line/60">
+              <span className="text-taupe text-[11px] font-normal">Color:</span>
+              <span>{product.color}</span>
+            </span>
+          )}
+          {product.length && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sand/50 text-ink border border-line/60">
+              <span className="text-taupe text-[11px] font-normal">Length:</span>
+              <span>{product.length}</span>
+            </span>
+          )}
+          {product.finish && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sand/50 text-ink border border-line/60">
+              <span className="text-taupe text-[11px] font-normal">Finish:</span>
+              <span>{product.finish}</span>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Size */}
       <div className="mt-9">
         <div className="flex items-center justify-between">

@@ -33,6 +33,10 @@ export interface ProductDTO {
   imageUrl: string | null;
   /** Press-on nail shape (Almond, Coffin, Oval, Squoval, Square) */
   shape: string;
+  /** Primary color category (Black, Gold, Nude, Pink, Red, Silver, Yellow) */
+  color: string;
+  /** Nail length (Extra-long, Long, Short) */
+  length: string;
   /** Admin-configured sizes; empty means the standard XS–L range. */
   sizes: string[];
   /** Gallery ordered by position; index 0 is the cover. */
