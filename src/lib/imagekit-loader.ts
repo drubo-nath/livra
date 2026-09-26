@@ -36,13 +36,17 @@ export default function imageKitLoader({
     return src;
   }
 
-  // Pass through if not hosted on ImageKit
-  if (!src.includes("ik.imagekit.io")) {
+  // In development, serve local static assets directly so they render on localhost before deploy
+  if (
+    process.env.NODE_ENV === "development" &&
+    !src.startsWith("http://") &&
+    !src.startsWith("https://")
+  ) {
     return src;
   }
 
-  // If already has transformation parameters, avoid duplicate prefix
-  if (src.includes("/tr:")) {
+  // If the image is already served by ImageKit, avoid duplicate prefixing
+  if (src.includes("ik.imagekit.io")) {
     return src;
   }
 
@@ -50,6 +54,13 @@ export default function imageKitLoader({
   const params: string[] = [`w-${width}`, `q-${quality || 80}`, "f-auto"];
   const tr = `tr:${params.join(",")}`;
 
-  return src.replace(endpoint, `${endpoint}/${tr}`);
+  // Handle absolute external URLs (e.g. external S3)
+  if (src.startsWith("http://") || src.startsWith("https://")) {
+    return `${endpoint}/${tr}/${src}`;
+  }
+
+  // Handle relative internal paths (e.g. /header-image.jpg or /api/media/products/...)
+  const cleanPath = src.replace(/^\/+/, "");
+  return `${endpoint}/${tr}/${cleanPath}`;
 }
 
