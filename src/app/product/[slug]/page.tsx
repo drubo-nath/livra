@@ -60,10 +60,12 @@ export default async function ProductPage({
   params,
 }: PageProps<"/product/[slug]">) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, all] = await Promise.all([
+    getProductBySlug(slug),
+    listProducts(),
+  ]);
   if (!product) notFound();
 
-  const all = await listProducts();
   const related = all
     .filter((p) => p.slug !== product.slug && p.finish === product.finish)
     .concat(all.filter((p) => p.slug !== product.slug && p.finish !== product.finish))

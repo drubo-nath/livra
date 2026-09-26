@@ -75,7 +75,7 @@ export default function ToolCard({
         </button>
 
         {/* Product Image */}
-        <Link href={`/product/${product.slug}`} className="relative h-full w-full block">
+        <Link href={`/product/${product.slug}`} prefetch={true} className="relative h-full w-full block transition-transform duration-200 active:scale-[0.98]">
           {imageUrl ? (
             <Image
               src={imageUrl}
@@ -113,7 +113,8 @@ export default function ToolCard({
         {/* Product Title */}
         <Link
           href={`/product/${product.slug}`}
-          className="mt-1 text-xs sm:text-sm font-medium text-ink tracking-tight line-clamp-1 group-hover:text-clay transition-colors"
+          prefetch={true}
+          className="mt-1 text-xs sm:text-sm font-medium text-ink tracking-tight line-clamp-1 group-hover:text-clay transition-colors active:opacity-75"
         >
           {product.name}
         </Link>

@@ -142,6 +142,8 @@ const jsonLd = {
 };
 
 import Analytics from "@/components/analytics/Analytics";
+import NavigationProgress from "@/components/layout/NavigationProgress";
+import { Suspense } from "react";
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const announcements = await getAnnouncements();
@@ -159,6 +161,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col bg-bone text-ink">
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <Analytics />
         <CartProvider>
           <AnnouncementBar messages={announcements} />

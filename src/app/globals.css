@@ -257,3 +257,21 @@ h1, h2, h3, h4, h5, h6 {
 .admin-root :where(h1, h2, h3, h4, p, span, li, td, th, label) {
   font-family: inherit;
 }
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
