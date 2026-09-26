@@ -6,7 +6,13 @@ import Swatch from "@/components/Swatch";
 import BuyPanel from "@/components/product/BuyPanel";
 import ProductCard from "@/components/ProductCard";
 
-export const dynamic = "force-dynamic";
+export const dynamicParams = true;
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  const products = await listProducts();
+  return products.map((p) => ({ slug: p.slug }));
+}
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.livrapressons.com";
 

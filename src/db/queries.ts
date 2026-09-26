@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { asc, eq, desc, inArray } from "drizzle-orm";
+import { asc, eq, desc, inArray, or, sql } from "drizzle-orm";
 import { db, isDbConfigured, schema } from "./index";
 import { productSeeds, reviewSeeds, contentSeeds } from "./seed-data";
 import { normalizeFinish, type ProductDTO, type ReviewDTO } from "./types";
@@ -182,9 +182,22 @@ export const listProducts = cache(async (): Promise<ProductDTO[]> => {
         .where(eq(schema.products.isActive, true))
         .orderBy(asc(schema.products.sortOrder)),
     );
+    if (!rows || rows.length === 0) {
+      return productSeeds.map(seedToDTO);
+    }
     const images = await attachImages(rows);
     const covers = await resolveCoverFallback(rows, images);
-    return rows.map((r) => toDTO(r, images.get(r.id) ?? [], covers.get(r.id)));
+    const dbDtos = rows.map((r) =>
+      toDTO(r, images.get(r.id) ?? [], covers.get(r.id)),
+    );
+
+    // Merge: ensure standard seed catalog products remain accessible if DB only has a few records
+    const dbSlugs = new Set(dbDtos.map((p) => p.slug.toLowerCase()));
+    const extraSeeds = productSeeds
+      .map(seedToDTO)
+      .filter((s) => !dbSlugs.has(s.slug.toLowerCase()));
+
+    return [...dbDtos, ...extraSeeds];
   } catch (e) {
     handleDbFailure("listProducts", e);
     return productSeeds.map(seedToDTO);
@@ -193,23 +206,48 @@ export const listProducts = cache(async (): Promise<ProductDTO[]> => {
 
 export const getProductBySlug = cache(
   async (slug: string): Promise<ProductDTO | null> => {
-    if (!isDbOnline())
-      return productSeeds.map(seedToDTO).find((p) => p.slug === slug) ?? null;
+    const raw = (slug ?? "").trim();
+    const decoded = decodeURIComponent(raw).trim();
+    const lower = decoded.toLowerCase();
+
+    const findInSeeds = () => {
+      const allSeeds = productSeeds.map(seedToDTO);
+      return (
+        allSeeds.find(
+          (p) =>
+            p.slug === raw ||
+            p.slug === decoded ||
+            p.slug.toLowerCase() === lower,
+        ) ?? null
+      );
+    };
+
+    if (!isDbOnline()) return findInSeeds();
+
     try {
       const rows = await withTimeout(
         db
           .select()
           .from(schema.products)
-          .where(eq(schema.products.slug, slug))
+          .where(
+            or(
+              eq(schema.products.slug, raw),
+              eq(schema.products.slug, decoded),
+              sql`lower(${schema.products.slug}) = ${lower}`,
+            ),
+          )
           .limit(1),
       );
-      if (!rows[0]) return null;
+      if (!rows[0]) {
+        // Fall back to seed catalog so known products never 404
+        return findInSeeds();
+      }
       const images = await attachImages(rows);
       const covers = await resolveCoverFallback(rows, images);
       return toDTO(rows[0], images.get(rows[0].id) ?? [], covers.get(rows[0].id));
     } catch (e) {
       handleDbFailure(`getProductBySlug(${slug})`, e);
-      return productSeeds.map(seedToDTO).find((p) => p.slug === slug) ?? null;
+      return findInSeeds();
     }
   },
 );

@@ -24,6 +24,9 @@ export default function imageKitLoader({
   width: number;
   quality?: number;
 }): string {
+  // Pass through empty or non-string
+  if (!src) return "";
+
   // Pass through vector SVGs, data URIs, and blob URIs without transformation
   if (
     src.endsWith(".svg") ||
@@ -33,17 +36,13 @@ export default function imageKitLoader({
     return src;
   }
 
-  // In development, serve local static assets directly so they render on localhost before deploy
-  if (
-    process.env.NODE_ENV === "development" &&
-    !src.startsWith("http://") &&
-    !src.startsWith("https://")
-  ) {
+  // Pass through if not hosted on ImageKit
+  if (!src.includes("ik.imagekit.io")) {
     return src;
   }
 
-  // If the image is already served by ImageKit, avoid duplicate prefixing
-  if (src.includes("ik.imagekit.io")) {
+  // If already has transformation parameters, avoid duplicate prefix
+  if (src.includes("/tr:")) {
     return src;
   }
 
@@ -51,13 +50,6 @@ export default function imageKitLoader({
   const params: string[] = [`w-${width}`, `q-${quality || 80}`, "f-auto"];
   const tr = `tr:${params.join(",")}`;
 
-  // Handle absolute external URLs (e.g. cdn.shopify.com or external S3)
-  if (src.startsWith("http://") || src.startsWith("https://")) {
-    return `${endpoint}/${tr}/${src}`;
-  }
-
-  // Handle relative internal paths (e.g. /header-image.jpg or /api/media/products/...)
-  const cleanPath = src.replace(/^\/+/, "");
-  return `${endpoint}/${tr}/${cleanPath}`;
+  return src.replace(endpoint, `${endpoint}/${tr}`);
 }
 
