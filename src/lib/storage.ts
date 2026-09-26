@@ -49,7 +49,12 @@ export function imageKey(productId: number, fileName: string) {
 /* ─── Config ────────────────────────────────────────────────────────── */
 
 export function bucketName(): string | undefined {
-  return process.env.AWS_BUCKET_NAME_IMAGE;
+  return (
+    process.env.AWS_BUCKET_NAME_IMAGE ||
+    process.env.AWS_BUCKET_NAME ||
+    process.env.S3_BUCKET ||
+    process.env.BUCKET_NAME
+  );
 }
 
 export function storageConfigured(): boolean {
@@ -61,7 +66,7 @@ export function storageConfigured(): boolean {
 }
 
 export function client(): S3Client {
-  const endpoint = process.env.AWS_ENDPOINT_URL_S3;
+  const endpoint = process.env.AWS_ENDPOINT_URL_S3 || process.env.S3_ENDPOINT;
   return new S3Client({
     region: process.env.AWS_REGION || "auto",
     endpoint: endpoint || undefined,
@@ -101,12 +106,9 @@ export function keyFromStoredUrl(url: string): string | null {
     }
   }
 
-  // Legacy full bucket URLs (endpoint path-style).
-  const endpoint = process.env.AWS_ENDPOINT_URL_S3?.replace(/\/$/, "");
-  if (endpoint && u.startsWith(`${endpoint}/`)) {
-    const m = u.match(new RegExp(KEY_PATTERN));
-    if (m) return m[0];
-  }
+  // S3 / Tigris URLs (endpoint path-style or any domain containing products/<id>/<file>)
+  const m = u.match(new RegExp(KEY_PATTERN));
+  if (m) return m[0];
 
   return null;
 }

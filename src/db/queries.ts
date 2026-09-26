@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { asc, eq, desc, inArray, or, sql } from "drizzle-orm";
+import { asc, eq, desc, inArray, or, and, ne, sql } from "drizzle-orm";
 import { db, isDbConfigured, schema } from "./index";
 import { productSeeds, reviewSeeds, contentSeeds } from "./seed-data";
 import { normalizeFinish, type ProductDTO, type ReviewDTO } from "./types";
@@ -132,35 +132,13 @@ async function resolveCoverFallback(
   return covers;
 }
 
-let dbOfflineUntil = 0;
-let hasLoggedOfflineWarning = false;
-
 function isDbOnline(): boolean {
-  if (!isDbConfigured) return false;
-  if (Date.now() < dbOfflineUntil) return false;
-  return true;
-}
-
-function handleDbFailure(operation: string, error: unknown) {
-  const isBuild = process.env.NEXT_PHASE === "phase-production-build";
-  // Trip circuit breaker for 60s during runtime, or 10 minutes during static build
-  dbOfflineUntil = Date.now() + (isBuild ? 600_000 : 60_000);
-
-  if (!hasLoggedOfflineWarning) {
-    hasLoggedOfflineWarning = true;
-    const isTimeout =
-      error instanceof Error &&
-      (error.message.includes("timed out") ||
-        error.message.includes("CONNECT_TIMEOUT") ||
-        error.message.includes("Connection terminated"));
-    console.warn(
-      `[db] Database connection ${isTimeout ? "timed out" : "unavailable"}. Serving fallback data.`,
-    );
-  }
+  return isDbConfigured;
 }
 
 async function withTimeout<T>(promise: Promise<T>, ms?: number): Promise<T> {
-  const timeoutMs = ms ?? (process.env.NEXT_PHASE === "phase-production-build" ? 2500 : 5000);
+  const timeoutMs =
+    ms ?? (process.env.NEXT_PHASE === "phase-production-build" ? 10000 : 15000);
   let timer: NodeJS.Timeout;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(
@@ -171,58 +149,32 @@ async function withTimeout<T>(promise: Promise<T>, ms?: number): Promise<T> {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-/** Request-memoized via React cache(); falls back to seed data pre-setup. */
+/** Request-memoized via React cache(); queries live database. */
 export const listProducts = cache(async (): Promise<ProductDTO[]> => {
-  if (!isDbOnline()) return productSeeds.map(seedToDTO);
+  if (!isDbOnline()) return [];
   try {
     const rows = await withTimeout(
       db
         .select()
         .from(schema.products)
         .where(eq(schema.products.isActive, true))
-        .orderBy(asc(schema.products.sortOrder)),
+        .orderBy(asc(schema.products.sortOrder), desc(schema.products.createdAt)),
     );
-    if (!rows || rows.length === 0) {
-      return productSeeds.map(seedToDTO);
-    }
     const images = await attachImages(rows);
     const covers = await resolveCoverFallback(rows, images);
-    const dbDtos = rows.map((r) =>
-      toDTO(r, images.get(r.id) ?? [], covers.get(r.id)),
-    );
-
-    // Merge: ensure standard seed catalog products remain accessible if DB only has a few records
-    const dbSlugs = new Set(dbDtos.map((p) => p.slug.toLowerCase()));
-    const extraSeeds = productSeeds
-      .map(seedToDTO)
-      .filter((s) => !dbSlugs.has(s.slug.toLowerCase()));
-
-    return [...dbDtos, ...extraSeeds];
+    return rows.map((r) => toDTO(r, images.get(r.id) ?? [], covers.get(r.id)));
   } catch (e) {
-    handleDbFailure("listProducts", e);
-    return productSeeds.map(seedToDTO);
+    console.error("[db] listProducts failed:", e);
+    return [];
   }
 });
 
 export const getProductBySlug = cache(
   async (slug: string): Promise<ProductDTO | null> => {
-    const raw = (slug ?? "").trim();
+    if (!isDbOnline() || !slug) return null;
+    const raw = slug.trim();
     const decoded = decodeURIComponent(raw).trim();
     const lower = decoded.toLowerCase();
-
-    const findInSeeds = () => {
-      const allSeeds = productSeeds.map(seedToDTO);
-      return (
-        allSeeds.find(
-          (p) =>
-            p.slug === raw ||
-            p.slug === decoded ||
-            p.slug.toLowerCase() === lower,
-        ) ?? null
-      );
-    };
-
-    if (!isDbOnline()) return findInSeeds();
 
     try {
       const rows = await withTimeout(
@@ -238,16 +190,49 @@ export const getProductBySlug = cache(
           )
           .limit(1),
       );
-      if (!rows[0]) {
-        // Fall back to seed catalog so known products never 404
-        return findInSeeds();
-      }
+      if (!rows[0]) return null;
       const images = await attachImages(rows);
       const covers = await resolveCoverFallback(rows, images);
       return toDTO(rows[0], images.get(rows[0].id) ?? [], covers.get(rows[0].id));
     } catch (e) {
-      handleDbFailure(`getProductBySlug(${slug})`, e);
-      return findInSeeds();
+      console.error(`[db] getProductBySlug(${slug}) failed:`, e);
+      return null;
+    }
+  },
+);
+
+export const getRelatedProducts = cache(
+  async (
+    currentSlug: string,
+    finish?: string,
+    limit = 4,
+  ): Promise<ProductDTO[]> => {
+    if (!isDbOnline()) return [];
+    try {
+      const rows = await withTimeout(
+        db
+          .select()
+          .from(schema.products)
+          .where(
+            and(
+              eq(schema.products.isActive, true),
+              ne(schema.products.slug, currentSlug),
+            ),
+          )
+          .orderBy(
+            finish
+              ? sql`case when ${schema.products.finish} = ${finish} then 0 else 1 end`
+              : asc(schema.products.sortOrder),
+            asc(schema.products.sortOrder),
+          )
+          .limit(limit),
+      );
+      const images = await attachImages(rows);
+      const covers = await resolveCoverFallback(rows, images);
+      return rows.map((r) => toDTO(r, images.get(r.id) ?? [], covers.get(r.id)));
+    } catch (e) {
+      console.error("[db] getRelatedProducts failed:", e);
+      return [];
     }
   },
 );
@@ -294,7 +279,7 @@ export const listBrandReviews = cache(async (): Promise<ReviewDTO[]> => {
     );
     return rows.filter((r) => r.productId === null);
   } catch (e) {
-    handleDbFailure("listBrandReviews", e);
+    console.error("[db] listBrandReviews failed:", e);
     return reviewSeeds.map((r, i) => ({ id: i + 1, ...r }));
   }
 });
@@ -319,7 +304,7 @@ export const getContentList = cache(async (key: string): Promise<string[]> => {
     const v = rows[0]?.value;
     return Array.isArray(v) ? (v as string[]) : contentFallback(key);
   } catch (e) {
-    handleDbFailure(`getContentList(${key})`, e);
+    console.error(`[db] getContentList(${key}) failed:`, e);
     return contentFallback(key);
   }
 });

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { listTools } from "@/db/queries";
 import ToolsCollectionClient from "@/components/tools/ToolsCollectionClient";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Tools & Accessories — LIVRA Luxury Press-On Nails",

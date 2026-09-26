@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { listProducts, getProductBySlug } from "@/db/queries";
+import { getProductBySlug, getRelatedProducts } from "@/db/queries";
 import Swatch from "@/components/Swatch";
 import BuyPanel from "@/components/product/BuyPanel";
 import ProductCard from "@/components/ProductCard";
 
-export const dynamicParams = true;
-export const revalidate = 60;
-
-export async function generateStaticParams() {
-  const products = await listProducts();
-  return products.map((p) => ({ slug: p.slug }));
-}
+export const dynamic = "force-dynamic";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.livrapressons.com";
 
@@ -66,16 +60,10 @@ export default async function ProductPage({
   params,
 }: PageProps<"/product/[slug]">) {
   const { slug } = await params;
-  const [product, all] = await Promise.all([
-    getProductBySlug(slug),
-    listProducts(),
-  ]);
+  const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const related = all
-    .filter((p) => p.slug !== product.slug && p.finish === product.finish)
-    .concat(all.filter((p) => p.slug !== product.slug && p.finish !== product.finish))
-    .slice(0, 4);
+  const related = await getRelatedProducts(product.slug, product.finish, 4);
 
   const productUrl = `${baseUrl}/product/${product.slug}`;
 

@@ -63,4 +63,3 @@ export default function imageKitLoader({
   const cleanPath = src.replace(/^\/+/, "");
   return `${endpoint}/${tr}/${cleanPath}`;
 }
-

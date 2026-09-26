@@ -5,6 +5,8 @@ import ShopByShape from "@/components/home/ShopByShape";
 import ToolsSection from "@/components/home/ToolsSection";
 import { listTools } from "@/db/queries";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const tools = await listTools();
 

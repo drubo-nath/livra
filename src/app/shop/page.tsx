@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { listNails } from "@/db/queries";
 import ShopClient from "@/components/shop/ShopClient";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.livrapressons.com";
 
