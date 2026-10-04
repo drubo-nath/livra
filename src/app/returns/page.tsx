@@ -197,12 +197,6 @@ export default function ReturnsPage() {
                   If a parcel has already been handed over to the delivery rider, cancellation is no
                   longer possible.
                 </p>
-                <div className="rounded-sm bg-sand/40 p-4 border border-line text-xs text-taupe">
-                  <p className="font-medium text-ink mb-1">Notice on Cash on Delivery (COD) Parcels</p>
-                  Refusing Cash on Delivery (COD) parcels at your doorstep without a valid, verifiable
-                  reason may result in a permanent ban from placing future COD orders with Livra
-                  Pressed Ons.
-                </div>
               </div>
             </Reveal>
           </section>

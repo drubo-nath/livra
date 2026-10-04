@@ -132,7 +132,7 @@ export default function OpenGraphImage() {
               textTransform: "uppercase",
             }}
           >
-            bKash & CoD
+            bKash & Nagad
           </div>
         </div>
       </div>

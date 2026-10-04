@@ -251,7 +251,7 @@ export default function Footer() {
           <div className="flex items-center gap-3 text-[11px] text-white/60">
             <span>🇧🇩 Bangladesh · BDT (৳)</span>
             <span className="text-white/20">|</span>
-            <span className="text-[10px] tracking-wider uppercase text-white/40 font-medium">bKash · Nagad · COD</span>
+            <span className="text-[10px] tracking-wider uppercase text-white/40 font-medium">bKash · Nagad · Card</span>
           </div>
         </div>
       </div>

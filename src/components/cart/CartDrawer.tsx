@@ -134,7 +134,7 @@ export default function CartDrawer() {
                     <p className="font-numeric font-semibold text-xl text-ink">{formatBDT(subtotal)}</p>
                   </div>
                   <p className="mb-5 text-xs text-taupe">
-                    Free delivery over ৳2,500 · Cash on delivery available
+                    Free delivery over ৳2,500 · Secure bKash, Nagad &amp; card payments
                   </p>
                   <Link
                     href="/checkout"

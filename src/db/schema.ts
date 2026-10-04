@@ -121,6 +121,7 @@ export const finishEnum = pgEnum("finish", [
 ]);
 export const badgeEnum = pgEnum("badge", ["Bestseller", "New"]);
 export const paymentMethodEnum = pgEnum("payment_method", [
+  /** Legacy — COD is no longer offered. Kept so historical orders stay valid. */
   "cod",
   "bkash",
   "nagad",
@@ -175,7 +176,7 @@ export const customers = pgTable(
   {
     id: serial("id").primaryKey(),
     name: text("name").notNull(),
-    /** Phone is the identity key — BD COD orders often have no email. */
+    /** Phone is the identity key — BD orders often have no email. */
     phone: text("phone").notNull(),
     email: text("email"),
     createdAt: timestamp("created_at", { withTimezone: true })

@@ -6,14 +6,14 @@ import FaqAccordion, { FaqItem } from "@/components/faq/FaqAccordion";
 export const metadata: Metadata = {
   title: "Frequently Asked Questions | LIVRA",
   description:
-    "Find answers about nail sizing, measuring with clear tape and ruler, application longevity, reusable press-ons, Cash on Delivery, and bespoke custom orders at Livra.",
+    "Find answers about nail sizing, measuring with clear tape and ruler, application longevity, reusable press-ons, payment methods, and bespoke custom orders at Livra.",
   alternates: {
     canonical: "/faq",
   },
   openGraph: {
     title: "Frequently Asked Questions | LIVRA",
     description:
-      "All your questions answered: measuring guide, wear duration, reusability, Cash on Delivery, and custom press-on sets.",
+      "All your questions answered: measuring guide, wear duration, reusability, payment methods, and custom press-on sets.",
     url: "https://www.livrapressons.com/faq",
   },
 };
@@ -66,11 +66,12 @@ const SIZING_ITEMS: FaqItem[] = [
 
 const ORDER_ITEMS: FaqItem[] = [
   {
-    question: "Do you offer Cash on Delivery (COD)?",
+    question: "What payment methods do you accept?",
     answer: (
       <p>
-        <strong>Yes</strong>, we offer Cash on Delivery across all 64 districts in Bangladesh. We also accept
-        online instant payments via bKash, Nagad, and debit/credit cards via SSLCOMMERZ.
+        We accept secure online payments via <strong>bKash</strong>, <strong>Nagad</strong>, and
+        debit/credit cards via SSLCOMMERZ. All orders are paid in full at checkout — we do not offer
+        Cash on Delivery.
       </p>
     ),
   },
@@ -82,7 +83,7 @@ const ORDER_ITEMS: FaqItem[] = [
         media pages, and our Dhaka nail artists will recreate it for you.
         <br />
         <span className="mt-2 block text-clay-deep font-medium">
-          Note: Customizable bespoke orders cannot be placed on Cash on Delivery (COD), and handcrafting +
+          Note: Customizable bespoke orders require full advance payment, and handcrafting +
           delivery takes approximately 3 weeks.
         </span>
       </p>
@@ -120,10 +121,10 @@ const FAQ_SCHEMA = {
     },
     {
       "@type": "Question",
-      name: "Do you offer Cash on Delivery (COD)?",
+      name: "What payment methods do you accept?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes, we offer Cash on Delivery (COD) across all districts in Bangladesh, as well as bKash, Nagad, and credit/debit card payments.",
+        text: "We accept bKash, Nagad, and credit/debit card payments via SSLCOMMERZ. All orders are paid in full at checkout; Cash on Delivery is not available.",
       },
     },
     {
@@ -131,7 +132,7 @@ const FAQ_SCHEMA = {
       name: "Can I customize a set?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes! Send a reference design to our WhatsApp or social channels. Custom bespoke sets take 3 weeks to create and deliver, and require advance payment (no COD).",
+        text: "Yes! Send a reference design to our WhatsApp or social channels. Custom bespoke sets take 3 weeks to create and deliver, and require full advance payment.",
       },
     },
   ],

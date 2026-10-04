@@ -48,9 +48,9 @@ const SECTIONS = [
     content: (
       <p>
         Prices for our products are listed in Bangladeshi Taka (BDT) and are subject to change
-        without prior notice. We accept payments via Cash on Delivery (COD), Mobile Banking (bKash
-        and Nagad), and all major Visa, Mastercard, and UnionPay credit and debit cards via
-        SSLCOMMERZ.
+        without prior notice. We accept payments via Mobile Banking (bKash and Nagad) and all
+        major Visa, Mastercard, and UnionPay credit and debit cards via SSLCOMMERZ. All orders
+        must be paid in full at checkout.
       </p>
     ),
   },

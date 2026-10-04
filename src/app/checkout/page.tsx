@@ -24,7 +24,6 @@ import { finishDisplayLabels, type Finish } from "@/db/types";
 import { Check, ShieldCheck, Loader2 } from "lucide-react";
 
 const PAYMENTS = [
-  { id: "cod", label: "Cash on Delivery" },
   { id: "bkash", label: "bKash" },
   { id: "nagad", label: "Nagad" },
   { id: "card", label: "Card" },
@@ -34,7 +33,7 @@ export default function CheckoutPage() {
   const { lines, subtotal, clear } = useCart();
   const { data: session, isPending } = authClient.useSession();
   const [placed, setPlaced] = useState<OrderResult | null>(null);
-  const [payment, setPayment] = useState<(typeof PAYMENTS)[number]["id"]>("cod");
+  const [payment, setPayment] = useState<(typeof PAYMENTS)[number]["id"]>("bkash");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 

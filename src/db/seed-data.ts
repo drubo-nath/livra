@@ -778,8 +778,7 @@ export const contentSeeds: ContentSeed[] = [
   {
     key: "announcements",
     value: [
-      "Complimentary delivery on orders over ৳2,500",
-      "Cash on delivery — anywhere in Bangladesh",
+      "Free Delivered anywhere in Bangladesh", 
       "New shades just landed",
     ],
   },
@@ -790,7 +789,7 @@ export const contentSeeds: ContentSeed[] = [
       "Damage-free removal",
       "Reusable up to 5 wears",
       "Cruelty-free formula",
-      "Cash on delivery nationwide",
+      "Delivered nationwide",
       "10-minute application",
     ],
   },
