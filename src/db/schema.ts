@@ -127,6 +127,16 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "nagad",
   "card",
 ]);
+/** Payment state tracked separately from fulfillment status (SSLCommerz). */
+export const paymentStatusEnum = pgEnum("payment_status", [
+  /** Awaiting gateway confirmation after session initiation. */
+  "unpaid",
+  /** Validated by the SSLCommerz Order Validation API. */
+  "paid",
+  "failed",
+  "cancelled",
+  "refunded",
+]);
 export const orderStatusEnum = pgEnum("order_status", [
   "pending",
   "confirmed",
@@ -207,6 +217,18 @@ export const orders = pgTable(
     city: text("city").notNull(),
     postalCode: text("postal_code"),
     paymentMethod: paymentMethodEnum("payment_method").notNull(),
+    // ─── SSLCommerz gateway fields (paymentStatus defaults until wiring) ──
+    paymentStatus: paymentStatusEnum("payment_status").notNull().default("unpaid"),
+    /** tran_id sent to SSLCommerz — equals orderNumber in v1. */
+    transactionId: text("transaction_id"),
+    /** Validation ID from the SSLCommerz Order Validation API. */
+    valId: text("val_id"),
+    bankTranId: text("bank_tran_id"),
+    /** 0 = safe, 1 = risky (hold fulfilment) per gateway docs. */
+    riskLevel: integer("risk_level"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    /** Raw gateway payload (IPN / validation) kept for audit + disputes. */
+    paymentDetails: jsonb("payment_details"),
     status: orderStatusEnum("status").notNull().default("pending"),
     subtotal: integer("subtotal").notNull(),
     shippingFee: integer("shipping_fee").notNull(),
@@ -219,6 +241,8 @@ export const orders = pgTable(
     uniqueIndex("orders_number_idx").on(t.orderNumber),
     index("orders_status_idx").on(t.status),
     index("orders_customer_idx").on(t.customerId),
+    index("orders_payment_status_idx").on(t.paymentStatus),
+    index("orders_transaction_idx").on(t.transactionId),
   ],
 );
 

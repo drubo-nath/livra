@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProductBySlug, getRelatedProducts } from "@/db/queries";
+import { listProducts, getProductBySlug } from "@/db/queries";
 import Swatch from "@/components/Swatch";
 import BuyPanel from "@/components/product/BuyPanel";
 import ProductCard from "@/components/ProductCard";
@@ -60,10 +60,16 @@ export default async function ProductPage({
   params,
 }: PageProps<"/product/[slug]">) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, all] = await Promise.all([
+    getProductBySlug(slug),
+    listProducts(),
+  ]);
   if (!product) notFound();
 
-  const related = await getRelatedProducts(product.slug, product.finish, 4);
+  const related = all
+    .filter((p) => p.slug !== product.slug && p.finish === product.finish)
+    .concat(all.filter((p) => p.slug !== product.slug && p.finish !== product.finish))
+    .slice(0, 4);
 
   const productUrl = `${baseUrl}/product/${product.slug}`;
 
