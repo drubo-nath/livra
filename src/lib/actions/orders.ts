@@ -31,7 +31,17 @@ export async function placeOrder(input: CheckoutInput): Promise<OrderResult> {
     };
   }
   const userId = session.user.id;
-  let orderPhone = session.user.phoneNumber!;
+  const sessionPhone = session.user.phoneNumber;
+
+  if (!sessionPhone) {
+    return {
+      ok: false,
+      error:
+        "Your account has no phone number on file. Please sign in with a verified phone number.",
+    };
+  }
+
+  let orderPhone = sessionPhone;
 
   const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) {
@@ -165,9 +175,18 @@ export async function placeOrder(input: CheckoutInput): Promise<OrderResult> {
     return result;
   } catch (e) {
     console.error("[orders] placeOrder failed:", e);
+
+    // Only surface known business-logic errors to the client.
+    // DB / network / infra errors must never be shown raw.
+    const msg = e instanceof Error ? e.message : "";
+    const isSafe =
+      msg.includes("is no longer available") ||
+      msg.includes("is not available for");
     return {
       ok: false,
-      error: e instanceof Error ? e.message : "Could not place the order.",
+      error: isSafe
+        ? msg
+        : "Something went wrong while placing your order. Please try again or contact us on WhatsApp.",
     };
   }
 }
