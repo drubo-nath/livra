@@ -200,7 +200,7 @@ export function orderConfirmationMessage(
   orderNumber: string,
   total: number,
 ): string {
-  return `Thank you for shopping at LIVRA! Your order #${orderNumber} for BDT ${total.toLocaleString("en-BD")} has been placed successfully.`;
+  return `Thank you for shopping at LIVRA! Your order #${orderNumber} for BDT ${total.toLocaleString("en-BD")} has been placed successfully. Visit us at livrapressons.com for order updates.`;
 }
 
 /**

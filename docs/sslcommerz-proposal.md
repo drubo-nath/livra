@@ -180,6 +180,13 @@ Estimated effort: ~half a day of code + a day of sandbox testing.
 - Architecture is dormant: no checkout flow change, no gateway calls fire.
 - `orders.paymentStatus` doesn't exist in the live DB yet — run `pnpm db:push`
   before switching Phase 2 on (safe: additive columns + enum + indexes only).
+  Until then, pages that `select()` full order rows (admin orders, admin
+  dashboard, profile order history, payment routes) degrade locally — payment
+  routes fail gracefully by design (verified by smoke test: forged success →
+  303 pending page; garbage IPN → 200 ignored; DB write errors logged loudly).
 - Store credentials exist in `.env.local` (`SSLCOMMERZ_*`) — verify they are
   the **sandbox test** credentials before testing; keep live credentials out of
   the repo (`.env.local` is git-ignored) and rotate before go-live.
+- Arcjet (`AJT_ENV`) is in dry run until a key is set — shield + rate limits
+  observe and log without blocking. See `docs/security-testing.md` for the
+  vulnerability test plan and current findings register.

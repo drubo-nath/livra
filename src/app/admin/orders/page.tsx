@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import OrderStatusSelector from "@/components/admin/OrderStatusSelector";
+import SyncPaymentButton from "@/components/admin/SyncPaymentButton";
 
 export const dynamic = "force-dynamic";
 
@@ -63,17 +64,35 @@ export default async function AdminOrders() {
                   {formatBDT(o.total)}
                 </span>
               </CardTitle>
-              <Badge
-                variant={
-                  o.status === "fulfilled"
-                    ? "default"
-                    : o.status === "cancelled"
-                      ? "destructive"
-                      : "secondary"
-                }
-              >
-                {o.status}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={
+                    o.paymentStatus === "paid"
+                      ? "default"
+                      : o.paymentStatus === "failed" || o.paymentStatus === "cancelled"
+                        ? "destructive"
+                        : "outline"
+                  }
+                  className={
+                    o.paymentStatus === "paid"
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      : ""
+                  }
+                >
+                  Payment: {o.paymentStatus}
+                </Badge>
+                <Badge
+                  variant={
+                    o.status === "fulfilled"
+                      ? "default"
+                      : o.status === "cancelled"
+                        ? "destructive"
+                        : "secondary"
+                  }
+                >
+                  {o.status}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
               <div className="text-sm">
@@ -91,9 +110,26 @@ export default async function AdminOrders() {
                     {o.addressLine}, {o.city} {o.postalCode ?? ""}
                   </span>
                 </p>
-                <p className="mt-3 text-xs capitalize text-muted-foreground">
-                  Payment: {o.paymentMethod}
-                </p>
+                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  <p className="capitalize">
+                    Channel: {o.paymentMethod}
+                  </p>
+                  {o.transactionId && (
+                    <p className="font-mono text-[11px]">
+                      Tran ID: {o.transactionId}
+                    </p>
+                  )}
+                  {o.bankTranId && (
+                    <p className="font-mono text-[11px]">
+                      Bank Tran: {o.bankTranId}
+                    </p>
+                  )}
+                  {o.paidAt && (
+                    <p className="text-[11px] text-emerald-700 font-medium">
+                      Paid: {new Date(o.paidAt).toLocaleString("en-BD")}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="text-sm">
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
@@ -125,11 +161,16 @@ export default async function AdminOrders() {
                 </p>
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
               <OrderStatusSelector
                 orderId={o.id}
                 orderNumber={o.orderNumber}
                 currentStatus={o.status}
+              />
+              <SyncPaymentButton
+                orderId={o.id}
+                orderNumber={o.orderNumber}
+                paymentStatus={o.paymentStatus}
               />
             </CardFooter>
           </Card>

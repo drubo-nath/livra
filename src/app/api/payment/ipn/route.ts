@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { ajIpn } from "@/lib/arcjet";
 import {
   finalizeSslczPayment,
   ipnStatusToTransition,
   markSslczPaymentStatus,
 } from "@/lib/payments";
 import { verifySslczSign } from "@/lib/sslcommerz";
-import { formToRecord } from "../callbacks";
+import { arcjetGuard, formToRecord } from "../callbacks";
 
 /**
  * IPN listener — the server-to-server source of truth. Covers customers who
@@ -21,6 +22,9 @@ import { formToRecord } from "../callbacks";
  * verifies.
  */
 export async function POST(request: NextRequest) {
+  const denied = await arcjetGuard(request, ajIpn);
+  if (denied) return denied;
+
   const params = await formToRecord(request);
   const tranId = params.tran_id;
 

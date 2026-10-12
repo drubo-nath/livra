@@ -123,6 +123,7 @@ export const badgeEnum = pgEnum("badge", ["Bestseller", "New"]);
 export const paymentMethodEnum = pgEnum("payment_method", [
   /** Legacy — COD is no longer offered. Kept so historical orders stay valid. */
   "cod",
+  "sslcommerz",
   "bkash",
   "nagad",
   "card",

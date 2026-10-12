@@ -56,7 +56,7 @@ export default function OrderStatusSelector({
   };
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-3 border-t pt-4">
+    <div className="flex flex-wrap items-center gap-2">
       <Select
         value={status}
         onValueChange={(val) => setStatus(val as OrderStatus)}

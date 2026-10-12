@@ -45,6 +45,14 @@ export async function updateOrderStatus(
   }
 }
 
+export async function syncOrderPaymentAction(orderId: number) {
+  await requireAdmin();
+  const { syncOrderPaymentWithSslcz } = await import("@/lib/payments");
+  const res = await syncOrderPaymentWithSslcz(orderId);
+  revalidatePath("/admin/orders");
+  return res;
+}
+
 export async function updateProductPrice(productId: number, price: number) {
   await requireAdmin();
   const parsed = z.number().int().min(100).max(100000).safeParse(price);

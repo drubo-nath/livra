@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-export const paymentMethods = ["bkash", "nagad", "card"] as const;
+export const paymentMethods = [
+  "sslcommerz",
+  "bkash",
+  "nagad",
+  "card",
+] as const;
 
 export const checkoutSchema = z.object({
   name: z.string().trim().min(2, "Name is too short").max(80),

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "motion/react";
 import { authClient } from "@/lib/auth-client";
 import { useCart } from "@/components/cart/CartProvider";
@@ -13,7 +14,6 @@ import {
 import {
   formatBDT,
   shippingFeeFor,
-  FREE_SHIPPING_THRESHOLD,
 } from "@/lib/format";
 import { formatPhone, normalizeBDPhone } from "@/lib/phone";
 import Swatch from "@/components/Swatch";
@@ -24,16 +24,14 @@ import { finishDisplayLabels, type Finish } from "@/db/types";
 import { Check, ShieldCheck, Loader2 } from "lucide-react";
 
 const PAYMENTS = [
-  { id: "bkash", label: "bKash" },
-  { id: "nagad", label: "Nagad" },
-  { id: "card", label: "Card" },
+  { id: "sslcommerz", label: "SSLCommerz" },
 ] as const;
 
 export default function CheckoutPage() {
   const { lines, subtotal, clear } = useCart();
   const { data: session, isPending } = authClient.useSession();
   const [placed, setPlaced] = useState<OrderResult | null>(null);
-  const [payment, setPayment] = useState<(typeof PAYMENTS)[number]["id"]>("bkash");
+  const [payment, setPayment] = useState<(typeof PAYMENTS)[number]["id"]>("sslcommerz");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -386,6 +384,12 @@ export default function CheckoutPage() {
                     itemsCount: lines.reduce((acc, l) => acc + l.qty, 0),
                   });
                   clear();
+
+                  // Redirect directly to SSLCommerz payment portal
+                  if (res.gatewayPageUrl) {
+                    window.location.href = res.gatewayPageUrl;
+                    return;
+                  }
                 } else setError(res.error);
                 setPlaced(res);
               });
@@ -398,7 +402,7 @@ export default function CheckoutPage() {
                 <Field
                   label="Full name"
                   name="name"
-                  placeholder={session?.user.name || "Ayesha Rahman"}
+                  placeholder={session?.user.name || "Write your Name"}
                   defaultValue={session?.user.name !== "Guest" ? session?.user.name : ""}
                   required
                 />
@@ -422,21 +426,26 @@ export default function CheckoutPage() {
 
             <fieldset disabled={!verified} className="disabled:opacity-50">
               <legend className="text-xs uppercase tracking-widest text-taupe font-medium">Payment</legend>
-              <div className="mt-4 grid gap-2.5 sm:grid-cols-2 sm:gap-3">
-                {PAYMENTS.map((p) => (
-                  <button
-                    type="button"
-                    key={p.id}
-                    onClick={() => setPayment(p.id)}
-                    className={
-                      payment === p.id
-                        ? "text-xs uppercase tracking-wider font-medium border border-ink bg-ink px-4 py-3.5 text-left text-cream transition-colors sm:px-5 sm:py-4"
-                        : "text-xs uppercase tracking-wider font-medium hairline border bg-transparent px-4 py-3.5 text-left text-taupe transition-colors hover:border-ink hover:text-ink sm:px-5 sm:py-4"
-                    }
-                  >
-                    {p.label}
-                  </button>
-                ))}
+              <div className="mt-4">
+                <div className="hairline border border-ink bg-white p-4 sm:p-5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative h-11 w-44 sm:h-12 sm:w-52 shrink-0">
+                      <Image
+                        src="/sslcommerz-logo.png"
+                        alt="SSLCommerz"
+                        fill
+                        className="object-contain object-left"
+                        priority
+                      />
+                    </div>
+                    <div className="text-xs sm:text-sm text-ink font-medium">
+                      Pay with SSLCommerz
+                    </div>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-ink text-cream text-[10px] uppercase font-semibold px-2.5 py-0.5 tracking-wider">
+                    Selected
+                  </span>
+                </div>
               </div>
             </fieldset>
 
@@ -452,7 +461,7 @@ export default function CheckoutPage() {
               className="w-full bg-ink px-4 py-4.5 text-center text-xs tracking-wider uppercase text-cream transition-colors duration-300 hover:bg-clay-deep disabled:cursor-not-allowed disabled:opacity-40 sm:py-5 sm:text-sm font-medium cursor-pointer"
             >
               {pending ? (
-                "Placing order…"
+                "Connecting to SSLCommerz…"
               ) : lines.length === 0 ? (
                 "Your bag is empty"
               ) : !verified ? (
@@ -461,7 +470,7 @@ export default function CheckoutPage() {
                 "Verify recipient number to continue"
               ) : (
                 <span>
-                  Place Order — <span className="font-numeric font-semibold">{formatBDT(total)}</span>
+                  Pay with SSLCommerz — <span className="font-numeric font-semibold">{formatBDT(total)}</span>
                 </span>
               )}
             </button>
@@ -504,12 +513,7 @@ export default function CheckoutPage() {
           </ul>
           <div className="hairline mt-6 space-y-2.5 border-t pt-6 text-sm">
             <Row label="Subtotal" value={formatBDT(subtotal)} />
-            <Row label="Delivery" value={shipping === 0 ? "Free" : formatBDT(shipping)} />
-            {shipping > 0 && subtotal > 0 && (
-              <p className="text-xs text-taupe">
-                Add <span className="font-numeric">{formatBDT(FREE_SHIPPING_THRESHOLD - subtotal)}</span> more for free delivery
-              </p>
-            )}
+            <Row label="Delivery" value="Free" />
             <div className="hairline flex items-center justify-between border-t pt-3">
               <p className="text-xs uppercase tracking-widest text-taupe font-medium">Total</p>
               <p className="font-numeric text-xl sm:text-2xl font-semibold">{formatBDT(total)}</p>

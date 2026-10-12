@@ -1,7 +1,9 @@
 "use server";
 
 import { eq, and, gt } from "drizzle-orm";
+import { request as arcjetRequest } from "@arcjet/next";
 import { db, isDbConfigured, schema } from "@/db";
+import { ajOtp } from "@/lib/arcjet";
 import { normalizeBDPhone } from "@/lib/phone";
 import { sendSMS, otpMessage } from "@/lib/sms";
 import { timingSafeEqual } from "crypto";
@@ -80,10 +82,31 @@ export async function verifyOrderPhoneToken(phone: string, token: string): Promi
   }
 }
 
+/** Shared Arcjet guard for OTP actions — strict per-IP rate limit. */
+async function otpRateLimited(): Promise<boolean> {
+  try {
+    const decision = await ajOtp.protect(await arcjetRequest());
+    if (decision.isDenied()) {
+      console.warn("[otp] action denied by Arcjet:", decision.reason);
+      return true;
+    }
+  } catch (err) {
+    console.error("[otp] Arcjet guard error:", err);
+  }
+  return false;
+}
+
 /**
  * Sends a 6-digit OTP code to an alternate delivery phone number.
  */
 export async function sendOrderOtpAction(rawPhone: string): Promise<SendOtpResult> {
+  if (await otpRateLimited()) {
+    return {
+      ok: false,
+      error: "Too many verification attempts. Please wait a few minutes and try again.",
+    };
+  }
+
   const normalized = normalizeBDPhone(rawPhone);
   if (!normalized) {
     return { ok: false, error: "Please enter a valid Bangladeshi mobile number (01XXXXXXXXX)." };
@@ -132,6 +155,13 @@ export async function verifyOrderOtpAction(
   rawPhone: string,
   code: string,
 ): Promise<VerifyOtpResult> {
+  if (await otpRateLimited()) {
+    return {
+      ok: false,
+      error: "Too many verification attempts. Please wait a few minutes and try again.",
+    };
+  }
+
   const normalized = normalizeBDPhone(rawPhone);
   if (!normalized) {
     return { ok: false, error: "Invalid mobile number." };

@@ -1,14 +1,16 @@
 "use server";
 
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db, isDbConfigured, schema } from "@/db";
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations";
 import { shippingFeeFor } from "@/lib/format";
 import { getSessionUser } from "@/lib/auth";
 import { sendSMS, orderConfirmationMessage } from "@/lib/sms";
 
+import { createSslczSession } from "@/lib/sslcommerz";
+
 export type OrderResult =
-  | { ok: true; orderNumber: string; total: number }
+  | { ok: true; orderNumber: string; total: number; gatewayPageUrl?: string }
   | { ok: false; error: string };
 
 /**
@@ -162,17 +164,75 @@ export async function placeOrder(input: CheckoutInput): Promise<OrderResult> {
         .insert(schema.orderItems)
         .values(lines.map((l) => ({ ...l, orderId: order.id })));
 
-      return { ok: true as const, orderNumber, total };
+      return {
+        ok: true as const,
+        orderId: order.id,
+        orderNumber,
+        total,
+        customerName: data.name,
+        customerEmail: data.email || `${orderPhone.replace(/\D/g, "")}@customer.livra.bd`,
+        customerAddress: data.address,
+        customerCity: data.city,
+        customerPostalCode: data.postalCode || undefined,
+        firstProductName: lines[0]?.productName || "Livra Press-on Nails",
+      };
     });
 
-    // Send order confirmation SMS non-blockingly to the recipient phone
-    sendSMS(orderPhone, orderConfirmationMessage(result.orderNumber, result.total)).catch(
-      (err) => {
-        console.error("[orders] SMS notification failed:", err);
-      },
-    );
+    // Initiate SSLCommerz payment gateway session
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL;
 
-    return result;
+    const sslSession = await createSslczSession({
+      tranId: result.orderNumber,
+      totalAmount: result.total,
+      currency: "BDT",
+      successUrl: `${appUrl}/api/payment/success`,
+      failUrl: `${appUrl}/api/payment/fail`,
+      cancelUrl: `${appUrl}/api/payment/cancel`,
+      ipnUrl: `${appUrl}/api/payment/ipn`,
+      cusName: result.customerName,
+      cusEmail: result.customerEmail,
+      cusAdd1: result.customerAddress,
+      cusCity: result.customerCity,
+      cusPostcode: result.customerPostalCode,
+      cusPhone: orderPhone,
+      productName: result.firstProductName,
+      productCategory: "Press-on Nails",
+      productProfile: "physical-goods",
+      valueA: result.orderNumber,
+    });
+
+    if (!sslSession.ok) {
+      console.error(
+        "[orders] SSLCommerz session initiation failed for order:",
+        result.orderNumber,
+        sslSession.error,
+      );
+      return {
+        ok: false,
+        error: "Unable to initiate secure payment with SSLCommerz. Please try again.",
+      };
+    }
+
+    // Save gateway transaction details onto order record
+    try {
+      await db
+        .update(schema.orders)
+        .set({
+          transactionId: result.orderNumber,
+          paymentDetails: { sessionKey: sslSession.sessionKey },
+        })
+        .where(eq(schema.orders.id, result.orderId));
+    } catch (err) {
+      console.warn("[orders] failed to store sessionKey onto order:", err);
+    }
+
+    return {
+      ok: true as const,
+      orderNumber: result.orderNumber,
+      total: result.total,
+      gatewayPageUrl: sslSession.gatewayPageUrl,
+    };
   } catch (e) {
     console.error("[orders] placeOrder failed:", e);
 

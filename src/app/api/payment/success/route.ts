@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { ajPayment } from "@/lib/arcjet";
 import { finalizeSslczPayment } from "@/lib/payments";
 import { verifySslczSign } from "@/lib/sslcommerz";
-import { formToRecord, resultUrl } from "../callbacks";
+import { arcjetGuard, formToRecord, resultUrl } from "../callbacks";
 
 /**
  * SSLCommerz POSTs here after a (claimed) successful payment, then the
@@ -12,7 +13,11 @@ import { formToRecord, resultUrl } from "../callbacks";
  * the IPN callback settles the order server-side.
  */
 export async function POST(request: NextRequest) {
+  const denied = await arcjetGuard(request, ajPayment);
+  if (denied) return denied;
   const params = await formToRecord(request);
+
+  console.log(params);
   const tranId = params.tran_id;
 
   const signOk = !params.verify_sign || verifySslczSign(params);

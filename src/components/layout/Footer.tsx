@@ -21,11 +21,12 @@ const SECTIONS = [
   {
     title: "Client Service",
     links: [
-      { label: "Contact Us", href: "/contact" },
+      { label: "About Us", href: "/about-us" },
+
       { label: "FAQs", href: "/faq" },
-      { label: "Shipping & Delivery", href: "/shipping" },
-      { label: "Return Policy", href: "/returns" },
+
       { label: "How to Find Your Size", href: "/sizing" },
+      { label: "Contact Us", href: "/contact" },
     ],
   },
   {
@@ -39,6 +40,8 @@ const SECTIONS = [
     links: [
       { label: "Terms & Conditions", href: "/terms" },
       { label: "Privacy Policy", href: "/privacy" },
+      { label: "Shipping & Delivery", href: "/shipping" },
+      { label: "Return Policy", href: "/returns" },
     ],
   },
 ];
@@ -134,6 +137,10 @@ export default function Footer() {
 
             <p className="text-xs leading-relaxed text-white/70 font-light pt-1">
               Salon-sculpted, handcrafted press-on nails crafted for Bangladesh&rsquo;s most refined hands. Damage-free, reusable for months, and ready in ten minutes.
+            </p>
+
+            <p className="text-xs text-white/80">
+              Pathania Goda, Chandgaon, Chattogram
             </p>
 
             <div className="space-y-1.5 pt-1 text-xs text-white/80">
@@ -249,9 +256,8 @@ export default function Footer() {
           </div>
 
           <div className="flex items-center gap-3 text-[11px] text-white/60">
-            <span>🇧🇩 Bangladesh · BDT (৳)</span>
-            <span className="text-white/20">|</span>
-            <span className="text-[10px] tracking-wider uppercase text-white/40 font-medium">bKash · Nagad · Card</span>
+            <span>Trade license Number : </span>
+            <span className="text-[10px] tracking-wider uppercase text-white/40 font-medium">008738</span>
           </div>
         </div>
       </div>
