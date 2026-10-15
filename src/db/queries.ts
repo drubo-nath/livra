@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { asc, eq, desc, inArray, or, and, ne, sql } from "drizzle-orm";
 import { db, isDbConfigured, schema } from "./index";
-import { productSeeds, reviewSeeds, contentSeeds } from "./seed-data";
+import { reviewSeeds, contentSeeds } from "./seed-data";
 import { normalizeFinish, type ProductDTO, type ReviewDTO } from "./types";
 import { resolveImageUrl } from "@/lib/storage";
 import { resolveProductShape } from "@/lib/shapes";
@@ -113,33 +113,6 @@ function toDTO(
   };
 }
 
-function seedToDTO(s: (typeof productSeeds)[number]): ProductDTO {
-  const shape = extractPropertyTag(s.sizes, "shape") || resolveProductShape(s);
-  const color = extractPropertyTag(s.sizes, "color") || resolveProductColor(s);
-  const length = extractPropertyTag(s.sizes, "length") || resolveProductLength({ ...s, shape });
-  const { stock, inStock } = resolveProductStock(s.sizes);
-
-  return {
-    slug: s.slug,
-    name: s.name,
-    tagline: s.tagline,
-    description: s.description,
-    price: s.price,
-    compareAtPrice: s.compareAtPrice ?? null,
-    finish: normalizeFinish(s.finish) ?? "Exclusive",
-    badge: (s.badge as ProductDTO["badge"]) ?? null,
-    tones: [s.toneA, s.toneB],
-    imageUrl: s.imageUrl ?? null,
-    shape,
-    color,
-    length,
-    sizes: cleanSizes(s.sizes),
-    images: s.imageUrl ? [s.imageUrl] : [],
-    stock,
-    inStock,
-  };
-}
-
 /* ─── Products ──────────────────────────────────────────────────────── */
 
 /** Resolve the legacy cover column when a product has no gallery rows. */
@@ -184,18 +157,19 @@ export const listProducts = cache(async (): Promise<ProductDTO[]> => {
         .where(eq(schema.products.isActive, true))
         .orderBy(asc(schema.products.sortOrder), desc(schema.products.createdAt)),
     );
+    if (!rows.length) return [];
     const images = await attachImages(rows);
     const covers = await resolveCoverFallback(rows, images);
     return rows.map((r) => toDTO(r, images.get(r.id) ?? [], covers.get(r.id)));
   } catch (e) {
-    console.error("[db] listProducts failed:", e);
+    console.error("[db] listProducts query failed:", e);
     return [];
   }
 });
 
 export const getProductBySlug = cache(
   async (slug: string): Promise<ProductDTO | null> => {
-    if (!isDbOnline() || !slug) return null;
+    if (!slug || !isDbOnline()) return null;
     const raw = slug.trim();
     const decoded = decodeURIComponent(raw).trim();
     const lower = decoded.toLowerCase();
@@ -219,7 +193,7 @@ export const getProductBySlug = cache(
       const covers = await resolveCoverFallback(rows, images);
       return toDTO(rows[0], images.get(rows[0].id) ?? [], covers.get(rows[0].id));
     } catch (e) {
-      console.error(`[db] getProductBySlug(${slug}) failed:`, e);
+      console.error(`[db] getProductBySlug(${slug}) query failed:`, e);
       return null;
     }
   },
@@ -231,33 +205,11 @@ export const getRelatedProducts = cache(
     finish?: string,
     limit = 4,
   ): Promise<ProductDTO[]> => {
-    if (!isDbOnline()) return [];
-    try {
-      const rows = await withTimeout(
-        db
-          .select()
-          .from(schema.products)
-          .where(
-            and(
-              eq(schema.products.isActive, true),
-              ne(schema.products.slug, currentSlug),
-            ),
-          )
-          .orderBy(
-            finish
-              ? sql`case when ${schema.products.finish} = ${finish} then 0 else 1 end`
-              : asc(schema.products.sortOrder),
-            asc(schema.products.sortOrder),
-          )
-          .limit(limit),
-      );
-      const images = await attachImages(rows);
-      const covers = await resolveCoverFallback(rows, images);
-      return rows.map((r) => toDTO(r, images.get(r.id) ?? [], covers.get(r.id)));
-    } catch (e) {
-      console.error("[db] getRelatedProducts failed:", e);
-      return [];
-    }
+    const all = await listProducts();
+    return all
+      .filter((p) => p.slug !== currentSlug)
+      .sort((a, b) => (finish && a.finish === finish ? -1 : 1))
+      .slice(0, limit);
   },
 );
 

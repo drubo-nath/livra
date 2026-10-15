@@ -16,6 +16,7 @@ export default async function AdminProducts() {
     finish: "Exclusive" | "Classic" | "Signature";
     badge: string | null;
     price: number;
+    stock: number;
     sizes: string[] | null;
     isActive: boolean;
     imageUrl: string | null;
@@ -33,6 +34,7 @@ export default async function AdminProducts() {
           finish: schema.products.finish,
           badge: schema.products.badge,
           price: schema.products.price,
+          stock: schema.products.stock,
           sizes: schema.products.sizes,
           isActive: schema.products.isActive,
           imageUrl: schema.products.imageUrl,
@@ -44,11 +46,11 @@ export default async function AdminProducts() {
         .from(schema.products)
         .orderBy(asc(schema.products.sortOrder), asc(schema.products.id));
     } catch (err) {
-      console.warn("[AdminProducts] Database query failed, using seeds fallback:", err);
+      console.error("[AdminProducts] Database query failed:", err);
     }
   }
 
-  if (!rows.length) {
+  if (!rows.length && !isDbConfigured) {
     rows = productSeeds.map((p, idx) => ({
       id: idx + 1,
       slug: p.slug,
@@ -57,6 +59,7 @@ export default async function AdminProducts() {
       finish: p.finish,
       badge: p.badge ?? null,
       price: p.price,
+      stock: 15,
       sizes: p.sizes ?? null,
       isActive: true,
       imageUrl: p.imageUrl ?? null,
