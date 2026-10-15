@@ -18,6 +18,7 @@ const EMPTY_TOOL: ProductFormValues = {
   toneB: "#e8ded8",
   isActive: true,
   sortOrder: 0,
+  stock: 25,
   isTool: true,
 };
 

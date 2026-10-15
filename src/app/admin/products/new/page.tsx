@@ -21,6 +21,7 @@ const EMPTY: ProductFormValues = {
   toneB: "#a6715c",
   isActive: true,
   sortOrder: 0,
+  stock: 15,
   isTool: false,
 };
 

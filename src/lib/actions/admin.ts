@@ -109,12 +109,13 @@ export async function createProduct(
   const baseSizes = (d.sizes ?? []).filter((s) => !s.includes(":"));
   const isTool = baseSizes.includes("tool") || (d.tagline ?? "").toLowerCase().includes("tool");
   const storedSizes = isTool
-    ? ["tool"]
+    ? ["tool", ...(d.stock !== undefined ? [`stock:${d.stock}`] : [])]
     : [
         ...baseSizes,
         ...(d.shape ? [`shape:${d.shape}`] : []),
         ...(d.color ? [`color:${d.color}`] : []),
         ...(d.length ? [`length:${d.length}`] : []),
+        ...(d.stock !== undefined ? [`stock:${d.stock}`] : []),
       ];
 
   const [row] = await db
@@ -131,6 +132,7 @@ export async function createProduct(
       sizes: storedSizes.length ? storedSizes : null,
       toneA: d.toneA ?? "#e8cfc4",
       toneB: d.toneB ?? "#a6715c",
+      stock: d.stock ?? 15,
       isActive: d.isActive ?? true,
       sortOrder: d.sortOrder ?? 0,
     })
@@ -162,12 +164,13 @@ export async function updateProduct(
   const baseSizes = (d.sizes ?? []).filter((s) => !s.includes(":"));
   const isTool = baseSizes.includes("tool") || (d.tagline ?? "").toLowerCase().includes("tool");
   const storedSizes = isTool
-    ? ["tool"]
+    ? ["tool", ...(d.stock !== undefined ? [`stock:${d.stock}`] : [])]
     : [
         ...baseSizes,
         ...(d.shape ? [`shape:${d.shape}`] : []),
         ...(d.color ? [`color:${d.color}`] : []),
         ...(d.length ? [`length:${d.length}`] : []),
+        ...(d.stock !== undefined ? [`stock:${d.stock}`] : []),
       ];
 
   await db
@@ -184,6 +187,7 @@ export async function updateProduct(
       sizes: storedSizes.length ? storedSizes : null,
       toneA: d.toneA ?? "#e8cfc4",
       toneB: d.toneB ?? "#a6715c",
+      stock: d.stock ?? 15,
       isActive: d.isActive ?? true,
       sortOrder: d.sortOrder ?? 0,
       updatedAt: new Date(),

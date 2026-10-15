@@ -46,6 +46,7 @@ export const productSchema = z.object({
   sizes: z.array(z.string().trim().min(1).max(24)).max(24).optional(),
   toneA: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Hex color").optional(),
   toneB: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Hex color").optional(),
+  stock: z.coerce.number().int().min(0, "Stock cannot be negative").max(99999).optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).max(9999).optional(),
 });

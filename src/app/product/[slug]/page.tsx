@@ -92,7 +92,9 @@ export default async function ProductPage({
       "price": product.price,
       "priceValidUntil": "2027-12-31",
       "itemCondition": "https://schema.org/NewCondition",
-      "availability": "https://schema.org/InStock",
+      "availability": product.inStock && product.stock > 0
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
       "seller": {
         "@type": "Organization",
         "name": "LIVRA Beauty",
@@ -125,6 +127,8 @@ export default async function ProductPage({
     ],
   };
 
+  const isOutOfStock = !product.inStock || product.stock === 0;
+
   return (
     <>
       <script
@@ -152,23 +156,43 @@ export default async function ProductPage({
 
       <section className="mx-auto grid max-w-[1440px] gap-12 px-5 py-10 md:grid-cols-2 md:px-10 md:py-14 lg:gap-20">
         <div className="grid gap-4">
-          <Swatch
-            tones={product.tones}
-            imageUrl={product.imageUrl}
-            variant="hero"
-            className="aspect-[4/5] w-full"
-          />
+          <div className="relative aspect-[4/5] w-full overflow-hidden bg-sand/30">
+            <Swatch
+              tones={product.tones}
+              imageUrl={product.imageUrl}
+              variant="hero"
+              className="h-full w-full"
+            />
+            {isOutOfStock && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] p-6 text-center select-none">
+                <span className="bg-white/95 text-ink text-xs sm:text-sm font-semibold tracking-widest uppercase px-6 py-2.5 shadow-md border border-line">
+                  Out of Stock
+                </span>
+                <span className="mt-2 text-[11px] text-white/90 font-light tracking-wider">
+                  Currently Unavailable
+                </span>
+              </div>
+            )}
+          </div>
           {product.images.length > 1 && (
             <div
               className={`grid gap-4 ${product.images.length >= 3 ? "grid-cols-3" : product.images.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}
             >
               {product.images.slice(1).map((img, i) => (
-                <Swatch
-                  key={i}
-                  tones={product.tones}
-                  imageUrl={img}
-                  className="aspect-square w-full"
-                />
+                <div key={i} className="relative aspect-square w-full overflow-hidden bg-sand/20">
+                  <Swatch
+                    tones={product.tones}
+                    imageUrl={img}
+                    className="h-full w-full"
+                  />
+                  {isOutOfStock && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 backdrop-blur-[1px]">
+                      <span className="bg-white/90 text-ink text-[10px] font-semibold tracking-widest uppercase px-2 py-0.5 shadow-xs">
+                        Out of Stock
+                      </span>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}

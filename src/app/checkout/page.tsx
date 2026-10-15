@@ -44,6 +44,7 @@ export default function CheckoutPage() {
   const [otpError, setOtpError] = useState<string | null>(null);
   const [phoneVerificationToken, setPhoneVerificationToken] = useState<string | null>(null);
   const [verifiedRecipientPhone, setVerifiedRecipientPhone] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const verified = Boolean(session?.user.phoneNumberVerified);
   const isAlternateUnverified =
@@ -359,6 +360,10 @@ export default function CheckoutPage() {
                 setError("Please verify the alternate delivery phone number via OTP before confirming your order.");
                 return;
               }
+              if (!termsAccepted) {
+                setError("Please agree to the Terms & Conditions, Privacy Policy, and Return & Cancellation Policy to proceed.");
+                return;
+              }
               const fd = new FormData(e.currentTarget);
               startTransition(async () => {
                 const res = await placeOrder({
@@ -455,9 +460,34 @@ export default function CheckoutPage() {
               </p>
             )}
 
+            {/* Terms & Conditions Agreement */}
+            <label className="flex items-start gap-3 cursor-pointer select-none group">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-ink cursor-pointer border border-line rounded-sm"
+              />
+              <span className="text-xs leading-relaxed text-taupe group-hover:text-ink transition-colors">
+                I have read and agree to the{" "}
+                <Link href="/terms" target="_blank" className="text-ink font-medium underline underline-offset-2 hover:text-clay-deep">
+                  Terms &amp; Conditions
+                </Link>
+                ,{" "}
+                <Link href="/privacy" target="_blank" className="text-ink font-medium underline underline-offset-2 hover:text-clay-deep">
+                  Privacy Policy
+                </Link>
+                , and{" "}
+                <Link href="/returns" target="_blank" className="text-ink font-medium underline underline-offset-2 hover:text-clay-deep">
+                  Return &amp; Cancellation Policy
+                </Link>
+                .
+              </span>
+            </label>
+
             <button
               type="submit"
-              disabled={pending || lines.length === 0 || !verified || isAlternateUnverified}
+              disabled={pending || lines.length === 0 || !verified || isAlternateUnverified || !termsAccepted}
               className="w-full bg-ink px-4 py-4.5 text-center text-xs tracking-wider uppercase text-cream transition-colors duration-300 hover:bg-clay-deep disabled:cursor-not-allowed disabled:opacity-40 sm:py-5 sm:text-sm font-medium cursor-pointer"
             >
               {pending ? (
@@ -468,6 +498,8 @@ export default function CheckoutPage() {
                 "Verify your number to continue"
               ) : isAlternateUnverified ? (
                 "Verify recipient number to continue"
+              ) : !termsAccepted ? (
+                "Agree to policies to continue"
               ) : (
                 <span>
                   Pay with SSLCommerz — <span className="font-numeric font-semibold">{formatBDT(total)}</span>

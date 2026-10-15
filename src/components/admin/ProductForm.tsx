@@ -85,6 +85,7 @@ export interface ProductFormValues {
   toneB: string;
   isActive: boolean;
   sortOrder: number;
+  stock?: number;
   isTool?: boolean;
 }
 
@@ -147,6 +148,7 @@ export default function ProductForm({
       sizes,
       toneA: values.toneA || "#e8cfc4",
       toneB: values.toneB || "#a6715c",
+      stock: values.stock ?? 15,
       isActive: values.isActive,
       sortOrder: values.sortOrder,
     };
@@ -393,7 +395,7 @@ export default function ProductForm({
             />
           </div>
 
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="price">Price (৳) *</Label>
               <Input
@@ -422,6 +424,25 @@ export default function ProductForm({
                   set(
                     "compareAtPrice",
                     e.target.value ? Number(e.target.value) : null,
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stock">
+                Stock Quantity{" "}
+                <span className="text-xs font-normal text-muted-foreground">(0 = Out of stock)</span>
+              </Label>
+              <Input
+                id="stock"
+                type="number"
+                min={0}
+                max={99999}
+                value={values.stock ?? 15}
+                onChange={(e) =>
+                  set(
+                    "stock",
+                    e.target.value !== "" ? Number(e.target.value) : 0,
                   )
                 }
               />

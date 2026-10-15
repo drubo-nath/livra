@@ -64,6 +64,7 @@ export default async function EditProductPage({
         isActive: true,
         sortOrder: seed.sortOrder ?? productId,
         imageUrl: seed.imageUrl ?? null,
+        stock: 15,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -83,6 +84,8 @@ export default async function EditProductPage({
   const shapeTag = (row.sizes ?? []).find((s) => s.startsWith("shape:"))?.replace("shape:", "");
   const colorTag = (row.sizes ?? []).find((s) => s.startsWith("color:"))?.replace("color:", "");
   const lengthTag = (row.sizes ?? []).find((s) => s.startsWith("length:"))?.replace("length:", "");
+  const stockTag = (row.sizes ?? []).find((s) => s.startsWith("stock:"))?.replace("stock:", "");
+  const stock = stockTag !== undefined ? parseInt(stockTag, 10) : 15;
 
   const shape = shapeTag || resolveProductShape(row);
   const color = colorTag || resolveProductColor(row);
@@ -106,6 +109,7 @@ export default async function EditProductPage({
     toneB: row.toneB,
     isActive: row.isActive,
     sortOrder: row.sortOrder,
+    stock: isNaN(stock) ? 15 : stock,
     isTool: (row.sizes ?? []).includes("tool") || (row.tagline ?? "").toLowerCase().includes("tool"),
   };
 

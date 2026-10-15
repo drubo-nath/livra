@@ -166,6 +166,8 @@ export const products = pgTable(
     imageUrl: text("image_url"),
     /** Available sizes, e.g. {"XS","S","M","L"} — empty/NULL means all defaults. */
     sizes: text("sizes").array(),
+    /** Available inventory / stock quantity (defaults to 15). */
+    stock: integer("stock").notNull().default(15),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })

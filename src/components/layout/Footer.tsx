@@ -96,6 +96,9 @@ export default function Footer() {
                   livrapressons@gmail.com
                 </a>
               </p>
+              <p className="pt-1 text-white/60">
+                Pathania Goda, Chandgaon, Chattogram
+              </p>
             </div>
           </div>
 
@@ -122,7 +125,7 @@ export default function Footer() {
         </div>
 
         {/* ── Mobile Layout (< md) ── */}
-        <div className="md:hidden">
+        <div className="md:hidden border-t border-white/10">
           {/* Brand Manifesto & Concierge */}
           <div className="space-y-4 max-w-sm mb-8">
             <Link href="/" className="inline-block">
@@ -220,40 +223,24 @@ export default function Footer() {
             })}
           </div>
         </div>
+        
+        {/* ── SSL Commerce Payment Banner ── */}
+        <div className="mt-10 md:mt-14 border-t border-white/10">
+          <div className="mx-auto w-full max-w-4xl mt-6">
+            <Image
+              src="/payment-banner-ssl.png"
+              alt="Payment methods — SSLCommerz"
+              width={1700}
+              height={120}
+              className="w-full h-auto object-contain opacity-90"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 896px"
+            />
+          </div>
+        </div>
 
         {/* ── Sub-Footer Bottom Bar ── */}
-        <div className="mt-12 md:mt-18 border-t border-white/10 pt-8 flex flex-col items-start justify-between gap-6 text-xs text-white/50 md:flex-row md:items-center">
+        <div className="mt-8 md:mt-1  pt-8 flex flex-col items-start justify-between gap-6 text-xs text-white/50 md:flex-row md:items-center">
           <p>© {new Date().getFullYear()} Livra Press-Ons. All rights reserved.</p>
-
-          <div className="hidden md:flex flex-wrap items-center gap-3.5 text-xs text-white/60">
-            <Link href="/terms" className="hover:text-white transition-colors">
-              Terms
-            </Link>
-            <span>·</span>
-            <Link href="/privacy" className="hover:text-white transition-colors">
-              Privacy
-            </Link>
-            <span>·</span>
-            <Link href="/shipping" className="hover:text-white transition-colors">
-              Shipping
-            </Link>
-            <span>·</span>
-            <Link href="/returns" className="hover:text-white transition-colors">
-              Returns
-            </Link>
-            <span>·</span>
-            <Link href="/sizing" className="hover:text-white transition-colors">
-              Sizing Guide
-            </Link>
-            <span>·</span>
-            <Link href="/faq" className="hover:text-white transition-colors">
-              FAQ
-            </Link>
-            <span>·</span>
-            <Link href="/contact" className="hover:text-white transition-colors">
-              Contact
-            </Link>
-          </div>
 
           <div className="flex items-center gap-3 text-[11px] text-white/60">
             <span>Trade license Number : </span>

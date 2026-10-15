@@ -28,6 +28,7 @@ export interface AdminProductRow {
   badge: string | null;
   price: number;
   isActive: boolean;
+  stock: number;
   imageUrl: string | null;
   imageCount: number;
   isTool?: boolean;
@@ -159,6 +160,7 @@ export default function ProductsTable({
               <TableHead>{isToolsMode ? "Tool / Accessory" : "Product"}</TableHead>
               {!isToolsMode && <TableHead>Finish</TableHead>}
               <TableHead>Price</TableHead>
+              <TableHead>Stock</TableHead>
               <TableHead>Images</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -232,6 +234,21 @@ export default function ProductsTable({
                       </TableCell>
                     )}
                     <TableCell className="font-numeric font-medium">{formatBDT(p.price)}</TableCell>
+                    <TableCell>
+                      {p.stock === 0 ? (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs font-semibold">
+                          Out of stock
+                        </Badge>
+                      ) : p.stock <= 5 ? (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-xs font-numeric font-semibold">
+                          {p.stock} left
+                        </Badge>
+                      ) : (
+                        <span className="text-xs font-numeric font-medium text-emerald-800 bg-emerald-50/70 border border-emerald-200 px-2 py-0.5 rounded">
+                          {p.stock} in stock
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground font-numeric">
                       {Number(p.imageCount)}
                     </TableCell>

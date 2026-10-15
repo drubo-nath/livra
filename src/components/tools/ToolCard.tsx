@@ -19,6 +19,8 @@ export default function ToolCard({
   const { isWishlisted, toggleWishlist } = useWishlist();
   const wishlisted = isWishlisted(product.slug);
 
+  const isOutOfStock = !product.inStock || product.stock === 0;
+
   const discountPercent =
     product.compareAtPrice && product.compareAtPrice > product.price
       ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
@@ -29,6 +31,7 @@ export default function ToolCard({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isOutOfStock) return;
     add(product, { qty: 1, size: "Standard" });
     openCart();
   };
@@ -43,19 +46,20 @@ export default function ToolCard({
     <div className="group relative flex flex-col font-sans select-none">
       {/* ── Product Image Container ── */}
       <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#fbf7f6] p-3 sm:p-4 flex items-center justify-center transition-all duration-300 group-hover:shadow-sm">
-        {/* Discount Badge (Top Left) */}
-        {discountPercent && (
+        {/* Out of Stock Badge (Top Left) */}
+        {isOutOfStock ? (
+          <span className="absolute top-2.5 left-2.5 z-10 rounded bg-neutral-900/90 px-2 py-0.5 text-[10px] font-semibold text-white shadow-xs tracking-wide uppercase">
+            Sold Out
+          </span>
+        ) : discountPercent ? (
           <span className="absolute top-2.5 left-2.5 z-10 rounded bg-[#be343c] px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-white shadow-xs tracking-wide uppercase">
             {discountPercent}% OFF
           </span>
-        )}
-
-        {/* Product Badge (e.g. Bestseller or New) */}
-        {product.badge && !discountPercent && (
+        ) : product.badge ? (
           <span className="absolute top-2.5 left-2.5 z-10 rounded bg-ink px-2 py-0.5 text-[10px] font-semibold text-cream tracking-wide uppercase">
             {product.badge}
           </span>
-        )}
+        ) : null}
 
         {/* Wishlist Heart Button */}
         <button
@@ -83,7 +87,10 @@ export default function ToolCard({
               fill
               priority={priority}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+              className={cn(
+                "object-contain transition-transform duration-500 ease-out group-hover:scale-105",
+                isOutOfStock && "opacity-80 grayscale-[20%]"
+              )}
             />
           ) : (
             <div
@@ -93,6 +100,15 @@ export default function ToolCard({
               }}
             />
           )}
+
+          {/* Out of Stock Image Overlay */}
+          {isOutOfStock && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[1px] pointer-events-none p-2 text-center rounded-lg">
+              <span className="bg-white/95 text-ink text-[10px] sm:text-[11px] font-semibold tracking-widest uppercase px-3 py-1 shadow-sm border border-line">
+                Out of Stock
+              </span>
+            </div>
+          )}
         </Link>
 
         {/* Quick Add To Bag Hover Pill */}
@@ -100,10 +116,16 @@ export default function ToolCard({
           <button
             type="button"
             onClick={handleAddToCart}
-            className="flex items-center gap-1.5 rounded-full bg-ink/90 px-4 py-2 text-[11px] font-medium tracking-wider uppercase text-white backdrop-blur-xs transition-all hover:bg-ink cursor-pointer shadow-md hover:scale-105 active:scale-95"
+            disabled={isOutOfStock}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full px-4 py-2 text-[11px] font-medium tracking-wider uppercase backdrop-blur-xs transition-all shadow-md",
+              isOutOfStock
+                ? "bg-neutral-200 text-neutral-500 cursor-not-allowed"
+                : "bg-ink/90 text-white hover:bg-ink cursor-pointer hover:scale-105 active:scale-95"
+            )}
           >
             <ShoppingBag className="h-3 w-3" />
-            Add to Bag
+            {isOutOfStock ? "Out of Stock" : "Add to Bag"}
           </button>
         </div>
       </div>
@@ -131,14 +153,32 @@ export default function ToolCard({
           )}
         </div>
 
+        {/* Stock Status Indicator */}
+        <div className="mt-1 flex items-center justify-center gap-1.5 text-[11px]">
+          <span
+            className={cn(
+              "font-medium",
+              isOutOfStock ? "text-red-600" : "text-emerald-700"
+            )}
+          >
+            {isOutOfStock ? "Out of Stock (Unavailable)" : `In Stock (${product.stock} available)`}
+          </span>
+        </div>
+
         {/* Mobile Quick Add Button */}
         <button
           type="button"
           onClick={handleAddToCart}
-          className="mt-2.5 flex sm:hidden w-full items-center justify-center gap-1.5 rounded-lg border border-line py-2 text-[11px] font-medium tracking-wide uppercase text-ink transition-colors hover:bg-ink hover:text-white cursor-pointer active:scale-98"
+          disabled={isOutOfStock}
+          className={cn(
+            "mt-2.5 flex sm:hidden w-full items-center justify-center gap-1.5 rounded-lg border py-2 text-[11px] font-medium tracking-wide uppercase transition-colors",
+            isOutOfStock
+              ? "border-neutral-200 bg-neutral-100 text-neutral-400 cursor-not-allowed"
+              : "border-line text-ink hover:bg-ink hover:text-white cursor-pointer active:scale-98"
+          )}
         >
           <ShoppingBag className="h-3 w-3" />
-          Add to Bag
+          {isOutOfStock ? "Out of Stock" : "Add to Bag"}
         </button>
       </div>
     </div>

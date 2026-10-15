@@ -64,6 +64,7 @@ export default async function EditToolPage({
         isActive: true,
         sortOrder: seed.sortOrder ?? productId,
         imageUrl: seed.imageUrl ?? null,
+        stock: 25,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -80,6 +81,9 @@ export default async function EditToolPage({
     })),
   );
 
+  const stockTag = (row.sizes ?? []).find((s) => s.startsWith("stock:"))?.replace("stock:", "");
+  const stock = stockTag !== undefined ? parseInt(stockTag, 10) : 15;
+
   const initial: ProductFormValues = {
     id: row.id,
     name: row.name,
@@ -90,11 +94,12 @@ export default async function EditToolPage({
     compareAtPrice: row.compareAtPrice,
     finish: normalizeFinish(row.finish) ?? "Classic",
     badge: row.badge ?? "",
-    sizes: row.sizes ?? ["tool"],
+    sizes: (row.sizes ?? ["tool"]).filter((s) => !s.includes(":")),
     toneA: row.toneA,
     toneB: row.toneB,
     isActive: row.isActive,
     sortOrder: row.sortOrder,
+    stock: isNaN(stock) ? 15 : stock,
     isTool: true,
   };
 

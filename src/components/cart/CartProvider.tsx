@@ -76,6 +76,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const add = useCallback(
     (product: ProductDTO, opts?: { qty?: number; size?: string }) => {
+      if (product.inStock === false || product.stock === 0) {
+        return;
+      }
       const qty = opts?.qty ?? 1;
       const size = opts?.size ?? "M";
       trackAddToCart({

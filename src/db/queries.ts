@@ -63,6 +63,22 @@ async function attachImages(
   return map;
 }
 
+export function resolveProductStock(sizes: string[] | null | undefined): { stock: number; inStock: boolean } {
+  const stockTag = extractPropertyTag(sizes, "stock");
+  if (stockTag !== null && stockTag !== undefined) {
+    const clean = stockTag.toLowerCase().trim();
+    if (clean === "0" || clean === "out" || clean === "unavailable" || clean === "false") {
+      return { stock: 0, inStock: false };
+    }
+    const num = parseInt(clean, 10);
+    if (!isNaN(num)) {
+      return { stock: Math.max(0, num), inStock: num > 0 };
+    }
+  }
+  // Default stock level for active atelier catalog
+  return { stock: 15, inStock: true };
+}
+
 function toDTO(
   r: ProductRow,
   images: string[] = [],
@@ -72,6 +88,9 @@ function toDTO(
   const shape = extractPropertyTag(r.sizes, "shape") || resolveProductShape(r);
   const color = extractPropertyTag(r.sizes, "color") || resolveProductColor(r);
   const length = extractPropertyTag(r.sizes, "length") || resolveProductLength({ ...r, shape });
+  const stockInfo = resolveProductStock(r.sizes);
+  const stock = typeof r.stock === "number" ? r.stock : stockInfo.stock;
+  const inStock = typeof r.stock === "number" ? r.stock > 0 : stockInfo.inStock;
 
   return {
     slug: r.slug,
@@ -89,6 +108,8 @@ function toDTO(
     length,
     sizes: cleanSizes(r.sizes),
     images: images.length ? images : cover ? [cover] : [],
+    stock,
+    inStock,
   };
 }
 
@@ -96,6 +117,7 @@ function seedToDTO(s: (typeof productSeeds)[number]): ProductDTO {
   const shape = extractPropertyTag(s.sizes, "shape") || resolveProductShape(s);
   const color = extractPropertyTag(s.sizes, "color") || resolveProductColor(s);
   const length = extractPropertyTag(s.sizes, "length") || resolveProductLength({ ...s, shape });
+  const { stock, inStock } = resolveProductStock(s.sizes);
 
   return {
     slug: s.slug,
@@ -113,6 +135,8 @@ function seedToDTO(s: (typeof productSeeds)[number]): ProductDTO {
     length,
     sizes: cleanSizes(s.sizes),
     images: s.imageUrl ? [s.imageUrl] : [],
+    stock,
+    inStock,
   };
 }
 

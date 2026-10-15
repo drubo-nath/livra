@@ -37,10 +37,14 @@ export interface ProductDTO {
   color: string;
   /** Nail length (Extra-long, Long, Short) */
   length: string;
-  /** Admin-configured sizes; empty means the standard XS–L range. */
+  /** Available sizes; empty means the standard XS–L range. */
   sizes: string[];
   /** Gallery ordered by position; index 0 is the cover. */
   images: string[];
+  /** Available inventory / stock quantity */
+  stock: number;
+  /** Whether the product is available / in stock */
+  inStock: boolean;
 }
 
 export interface ReviewDTO {

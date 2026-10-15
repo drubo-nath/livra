@@ -110,7 +110,7 @@ export default function HeroCarousel() {
                   alt={slide.alt}
                   fill
                   priority
-                  quality={94}
+                  quality={93}
                   sizes="100vw"
                   className={cn(
                     "object-cover transition-all duration-700",

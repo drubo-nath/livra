@@ -49,9 +49,12 @@ export default function ProductCard({ product }: { product: ProductDTO }) {
   const lifestyleImage = getProductLifestyleImage(product);
   const hasSecondary = Boolean(lifestyleImage && lifestyleImage !== primaryImage);
 
+  const isOutOfStock = !product.inStock || product.stock === 0;
+
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isOutOfStock) return;
     add(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 1600);
@@ -145,71 +148,101 @@ export default function ProductCard({ product }: { product: ProductDTO }) {
         {/* Wishlist Heart Icon (Top-Right) — Sibling to Link, avoids invalid DOM nesting */}
         <button
           type="button"
-          onClick={toggleWishlist}
-          suppressHydrationWarning
-          className="absolute top-1.5 right-1.5 z-20 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center text-ink/90 hover:text-ink transition-all active:scale-90 cursor-pointer"
-          aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
-        >
-          <Heart
-            className={cn(
-              "h-5 w-5 stroke-[1.5] transition-colors",
-              wishlisted
-                ? "fill-clay text-clay stroke-clay"
-                : "text-ink/80 hover:text-clay"
-            )}
-          />
-        </button>
+            onClick={toggleWishlist}
+            suppressHydrationWarning
+            className="absolute top-1.5 right-1.5 z-20 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center text-ink/90 hover:text-ink transition-all active:scale-90 cursor-pointer"
+            aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          >
+            <Heart
+              className={cn(
+                "h-5 w-5 stroke-[1.5] transition-colors",
+                wishlisted
+                  ? "fill-clay text-clay stroke-clay"
+                  : "text-ink/80 hover:text-clay"
+              )}
+            />
+          </button>
 
-        {/* Luxury Badge (Top-Left) */}
-        {product.badge && (
-          <span className="font-sans uppercase font-medium pointer-events-none absolute left-2.5 top-2.5 z-10 bg-cream/90 px-1.5 py-[1.5px] sm:py-1 text-[8px] sm:text-[9px] tracking-wider text-ink backdrop-blur-sm shadow-xs">
-            {product.badge}
-          </span>
-        )}
-      </div>
-
-      {/* ── Product Info & Action (Matching Versace reference) ── */}
-      <div className="mt-3 flex items-start justify-between gap-2.5 px-0.5">
-        {/* Left: Title & Price Link */}
-        <Link
-          href={`/product/${product.slug}`}
-          prefetch={true}
-          onClick={handleNavigate}
-          className={cn(
-            "flex-1 min-w-0 block group/title transition-opacity duration-200 active:opacity-75",
-            isNavigating && "opacity-85"
-          )}
-          aria-label={`View ${product.name}`}
-        >
-          <h3 className="font-serif font-semibold text-[14px] sm:text-[15px] md:text-base text-ink leading-snug line-clamp-2 group-hover/title:text-clay transition-colors duration-300">
-            {product.name}
-          </h3>
-          <div className="mt-1 flex items-baseline gap-2 font-numeric">
-            <span className="font-base text-[12px] sm:text-sm text-ink font-semibold">
-              ৳ {product.price.toLocaleString("en-US")}
-            </span>
-            {product.compareAtPrice && (
-              <span className="text-[11px] sm:text-xs text-taupe/70 line-through">
-                ৳ {product.compareAtPrice.toLocaleString("en-US")}
+          {/* Out of Stock Image Overlay */}
+          {isOutOfStock && (
+            <div className="absolute inset-0 z-15 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[1px] pointer-events-none p-3 text-center">
+              <span className="bg-white/95 text-ink text-[10px] sm:text-[11px] font-semibold tracking-widest uppercase px-3 py-1 shadow-sm border border-line">
+                Out of Stock
               </span>
-            )}
-          </div>
-        </Link>
-
-        {/* Right: Quick Add Shopping Bag Icon Button — Sibling to Link, avoids invalid DOM nesting */}
-        <button
-          type="button"
-          onClick={handleQuickAdd}
-          className="shrink-0 mt-0.5 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-end ml-0.5 text-ink hover:text-clay transition-all active:scale-90 cursor-pointer"
-          aria-label={`Add ${product.name} to bag`}
-        >
-          {added ? (
-            <Check className="h-5 w-5 stroke-[2] text-clay animate-scale-in" />
-          ) : (
-            <ShoppingBag className="h-5 w-5 stroke-[1.5]" />
+            </div>
           )}
-        </button>
-      </div>
+
+          {/* Luxury Badge / Out of Stock Badge (Top-Left) */}
+          {isOutOfStock ? (
+            <span className="font-sans uppercase font-medium pointer-events-none absolute left-2.5 top-2.5 z-10 bg-neutral-900/90 text-white px-1.5 py-[1.5px] sm:py-1 text-[8px] sm:text-[9px] tracking-wider backdrop-blur-sm shadow-xs">
+              Sold Out
+            </span>
+          ) : product.badge ? (
+            <span className="font-sans uppercase font-medium pointer-events-none absolute left-2.5 top-2.5 z-10 bg-cream/90 px-1.5 py-[1.5px] sm:py-1 text-[8px] sm:text-[9px] tracking-wider text-ink backdrop-blur-sm shadow-xs">
+              {product.badge}
+            </span>
+          ) : null}
+        </div>
+
+        {/* ── Product Info & Action (Matching Versace reference) ── */}
+        <div className="mt-3 flex items-start justify-between gap-2.5 px-0.5">
+          {/* Left: Title & Price Link */}
+          <Link
+            href={`/product/${product.slug}`}
+            prefetch={true}
+            onClick={handleNavigate}
+            className={cn(
+              "flex-1 min-w-0 block group/title transition-opacity duration-200 active:opacity-75",
+              isNavigating && "opacity-85"
+            )}
+            aria-label={`View ${product.name}`}
+          >
+            <h3 className="font-serif font-semibold text-[14px] sm:text-[15px] md:text-base text-ink leading-snug line-clamp-2 group-hover/title:text-clay transition-colors duration-300">
+              {product.name}
+            </h3>
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <div className="flex items-baseline gap-2 font-numeric">
+                <span className="font-base text-[12px] sm:text-sm text-ink font-semibold">
+                  ৳ {product.price.toLocaleString("en-US")}
+                </span>
+                {product.compareAtPrice && (
+                  <span className="text-[11px] sm:text-xs text-taupe/70 line-through">
+                    ৳ {product.compareAtPrice.toLocaleString("en-US")}
+                  </span>
+                )}
+              </div>
+              <span
+                className={cn(
+                  "text-[10px] sm:text-[11px] font-medium tracking-tight shrink-0",
+                  isOutOfStock ? "text-red-600" : "text-emerald-700"
+                )}
+              >
+                {isOutOfStock ? "Out of Stock" : "In Stock"}
+              </span>
+            </div>
+          </Link>
+
+          {/* Right: Quick Add Shopping Bag Icon Button — Sibling to Link, avoids invalid DOM nesting */}
+          <button
+            type="button"
+            onClick={handleQuickAdd}
+            disabled={isOutOfStock}
+            className={cn(
+              "shrink-0 mt-0.5 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-end ml-0.5 transition-all",
+              isOutOfStock
+                ? "text-taupe/40 cursor-not-allowed opacity-40"
+                : "text-ink hover:text-clay active:scale-90 cursor-pointer"
+            )}
+            aria-label={isOutOfStock ? `${product.name} is out of stock` : `Add ${product.name} to bag`}
+            title={isOutOfStock ? "Out of Stock" : "Add to bag"}
+          >
+            {added ? (
+              <Check className="h-5 w-5 stroke-[2] text-clay animate-scale-in" />
+            ) : (
+              <ShoppingBag className="h-5 w-5 stroke-[1.5]" />
+            )}
+          </button>
+        </div>
     </motion.article>
   );
 }

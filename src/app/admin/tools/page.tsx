@@ -1,6 +1,7 @@
 import { asc, sql } from "drizzle-orm";
 import { db, schema, isDbConfigured } from "@/db";
 import { productSeeds } from "@/db/seed-data";
+import { resolveProductStock } from "@/db/queries";
 import { resolveImageUrl } from "@/lib/storage";
 import ProductsTable, { type AdminProductRow } from "@/components/admin/ProductsTable";
 
@@ -84,18 +85,23 @@ export default async function AdminToolsPage() {
     coversObj[c.id] = c.url;
   }
 
-  const products: AdminProductRow[] = toolRows.map((r) => ({
-    id: r.id,
-    slug: r.slug,
-    name: r.name,
-    finish: r.finish,
-    badge: r.badge,
-    price: r.price,
-    isActive: r.isActive,
-    imageUrl: r.imageUrl,
-    imageCount: Number(r.imageCount),
-    isTool: true,
-  }));
+  const products: AdminProductRow[] = toolRows.map((r) => {
+    const stockInfo = resolveProductStock(r.sizes);
+    const stock = typeof (r as any).stock === "number" ? (r as any).stock : stockInfo.stock;
+    return {
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      finish: r.finish,
+      badge: r.badge,
+      price: r.price,
+      stock,
+      isActive: r.isActive,
+      imageUrl: r.imageUrl,
+      imageCount: Number(r.imageCount),
+      isTool: true,
+    };
+  });
 
   const hiddenCount = products.filter((p) => !p.isActive).length;
 
