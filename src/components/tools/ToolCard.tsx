@@ -15,7 +15,7 @@ export default function ToolCard({
   product: ProductDTO;
   priority?: boolean;
 }) {
-  const { add, openCart } = useCart();
+  const { add, openCart, showStockAlert } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const wishlisted = isWishlisted(product.slug);
 
@@ -31,7 +31,10 @@ export default function ToolCard({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isOutOfStock) return;
+    if (isOutOfStock) {
+      showStockAlert(product.name);
+      return;
+    }
     add(product, { qty: 1, size: "Standard" });
     openCart();
   };
@@ -116,13 +119,14 @@ export default function ToolCard({
           <button
             type="button"
             onClick={handleAddToCart}
-            disabled={isOutOfStock}
+            aria-disabled={isOutOfStock}
             className={cn(
-              "flex items-center gap-1.5 rounded-full px-4 py-2 text-[11px] font-medium tracking-wider uppercase backdrop-blur-xs transition-all shadow-md",
+              "flex items-center gap-1.5 rounded-full px-4 py-2 text-[11px] font-medium tracking-wider uppercase backdrop-blur-xs transition-all shadow-md cursor-pointer",
               isOutOfStock
-                ? "bg-neutral-200 text-neutral-500 cursor-not-allowed"
-                : "bg-ink/90 text-white hover:bg-ink cursor-pointer hover:scale-105 active:scale-95"
+                ? "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
+                : "bg-ink/90 text-white hover:bg-ink hover:scale-105 active:scale-95"
             )}
+            title={isOutOfStock ? "Out of Stock — click for details" : "Add to Bag"}
           >
             <ShoppingBag className="h-3 w-3" />
             {isOutOfStock ? "Out of Stock" : "Add to Bag"}
@@ -169,13 +173,14 @@ export default function ToolCard({
         <button
           type="button"
           onClick={handleAddToCart}
-          disabled={isOutOfStock}
+          aria-disabled={isOutOfStock}
           className={cn(
-            "mt-2.5 flex sm:hidden w-full items-center justify-center gap-1.5 rounded-lg border py-2 text-[11px] font-medium tracking-wide uppercase transition-colors",
+            "mt-2.5 flex sm:hidden w-full items-center justify-center gap-1.5 rounded-lg border py-2 text-[11px] font-medium tracking-wide uppercase transition-colors cursor-pointer",
             isOutOfStock
-              ? "border-neutral-200 bg-neutral-100 text-neutral-400 cursor-not-allowed"
-              : "border-line text-ink hover:bg-ink hover:text-white cursor-pointer active:scale-98"
+              ? "border-neutral-200 bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+              : "border-line text-ink hover:bg-ink hover:text-white active:scale-98"
           )}
+          title={isOutOfStock ? "Out of Stock — click for details" : "Add to Bag"}
         >
           <ShoppingBag className="h-3 w-3" />
           {isOutOfStock ? "Out of Stock" : "Add to Bag"}

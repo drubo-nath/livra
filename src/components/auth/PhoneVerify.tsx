@@ -59,10 +59,10 @@ export default function PhoneVerify() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: EASE }}
-      className="hairline border bg-cream p-6 md:p-8"
+      className="hairline border bg-cream p-4 sm:p-6 md:p-8"
     >
       <p className="font-serif text-base text-ink">Step 1 — Verify your number</p>
-      <p className="mt-3 max-w-md text-sm leading-relaxed text-taupe">
+      <p className="mt-2.5 max-w-md text-xs sm:text-sm leading-relaxed text-taupe">
         Orders are tied to your mobile number. We&apos;ll text you a one-time
         code — no password needed.
       </p>
@@ -75,7 +75,7 @@ export default function PhoneVerify() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -12 }}
             transition={{ duration: 0.35, ease: EASE }}
-            className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:gap-2"
+            className="mt-4 sm:mt-5 flex flex-col gap-2.5 sm:flex-row sm:gap-2"
           >
             <input
               value={phone}
@@ -83,12 +83,12 @@ export default function PhoneVerify() {
               placeholder="01XXXXXXXXX"
               inputMode="tel"
               autoComplete="tel"
-              className="hairline min-w-0 flex-1 border bg-transparent px-4 py-3.5 text-sm outline-none transition-colors placeholder:text-taupe/60 focus:border-ink"
+              className="hairline min-w-0 flex-1 border bg-white sm:bg-transparent px-3.5 sm:px-4 py-3 sm:py-3.5 text-base sm:text-sm outline-none transition-colors placeholder:text-taupe/60 focus:border-ink rounded-none"
             />
             <button
               onClick={sendOtp}
               disabled={busy}
-              className="text-xs uppercase tracking-wider font-medium shrink-0 bg-ink px-6 py-3.5 text-cream transition-colors hover:bg-clay-deep disabled:opacity-50 sm:py-0"
+              className="text-xs uppercase tracking-wider font-semibold shrink-0 bg-ink px-6 py-3.5 text-cream transition-colors hover:bg-clay-deep disabled:opacity-50 sm:py-0 cursor-pointer"
             >
               {busy ? "Sending…" : "Send Code"}
             </button>
@@ -100,11 +100,11 @@ export default function PhoneVerify() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 12 }}
             transition={{ duration: 0.35, ease: EASE }}
-            className="mt-5 space-y-4"
+            className="mt-4 sm:mt-5 space-y-3 sm:space-y-4"
           >
-            <p className="text-sm text-taupe">
-              Sent to {phone}.{" "}
-              <button onClick={() => setStep("phone")} className="link-sweep">
+            <p className="text-xs sm:text-sm text-taupe">
+              Sent to <span className="font-numeric font-semibold text-ink">{phone}</span>.{" "}
+              <button onClick={() => setStep("phone")} className="link-sweep text-ink font-medium">
                 Change
               </button>
             </p>
@@ -115,12 +115,12 @@ export default function PhoneVerify() {
                 placeholder="······"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                className="hairline w-full border bg-transparent px-4 py-3.5 text-center font-serif text-xl tracking-[0.4em] outline-none focus:border-ink sm:w-40"
+                className="hairline w-full border bg-white sm:bg-transparent px-4 py-3 sm:py-3.5 text-center font-serif text-lg sm:text-xl tracking-[0.4em] outline-none focus:border-ink sm:w-40 rounded-none font-semibold"
               />
               <button
                 onClick={verify}
                 disabled={busy || code.length !== 6}
-                className="text-xs uppercase tracking-wider font-medium flex-1 bg-ink px-6 py-3.5 text-cream transition-colors hover:bg-clay-deep disabled:opacity-50"
+                className="text-xs uppercase tracking-wider font-semibold flex-1 bg-ink px-6 py-3.5 text-cream transition-colors hover:bg-clay-deep disabled:opacity-50 cursor-pointer"
               >
                 {busy ? "Verifying…" : "Verify & Continue"}
               </button>

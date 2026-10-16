@@ -6,10 +6,19 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { AlertCircle, X } from "lucide-react";
 import type { ProductDTO } from "@/db/types";
 import { trackAddToCart } from "@/lib/analytics";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  AlertAction,
+} from "@/components/ui/alert";
 
 /**
  * Cart lines carry a product SNAPSHOT (name/price/image) — anonymous carts
@@ -38,6 +47,7 @@ interface CartState {
   remove: (slug: string, size: string) => void;
   setQty: (slug: string, size: string, qty: number) => void;
   clear: () => void;
+  showStockAlert: (productName: string, message?: string) => void;
 }
 
 const CartContext = createContext<CartState | null>(null);
@@ -66,6 +76,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (hydrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
   }, [lines, hydrated]);
 
+  const [stockAlert, setStockAlert] = useState<{ id: string; productName: string; message?: string } | null>(null);
+  const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dismissStockAlert = useCallback(() => {
+    if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+    setStockAlert(null);
+  }, []);
+
+  const showStockAlert = useCallback((productName: string, message?: string) => {
+    if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+    setStockAlert({ id: `${Date.now()}`, productName, message });
+    alertTimerRef.current = setTimeout(() => {
+      setStockAlert(null);
+    }, 4000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+    };
+  }, []);
+
   // Lock scroll when drawer open
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -77,6 +109,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const add = useCallback(
     (product: ProductDTO, opts?: { qty?: number; size?: string }) => {
       if (product.inStock === false || product.stock === 0) {
+        showStockAlert(product.name);
         return;
       }
       const qty = opts?.qty ?? 1;
@@ -150,11 +183,58 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       remove,
       setQty,
       clear,
+      showStockAlert,
     }),
-    [lines, count, subtotal, isOpen, openCart, closeCart, add, remove, setQty, clear],
+    [lines, count, subtotal, isOpen, openCart, closeCart, add, remove, setQty, clear, showStockAlert],
   );
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={value}>
+      {children}
+
+      {/* Out-of-Stock Floating Alert Notification */}
+      <AnimatePresence>
+        {stockAlert && (
+          <motion.div
+            key={stockAlert.id}
+            role="status"
+            aria-live="polite"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.95 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed top-5 inset-x-4 sm:inset-x-auto sm:right-6 sm:w-96 z-[100] shadow-2xl pointer-events-auto"
+          >
+            <Alert variant="brand" className="border-line/90 bg-cream/98 backdrop-blur-md shadow-2xl text-ink">
+              <AlertCircle className="size-4 text-clay" />
+              <AlertTitle className="font-serif font-medium text-ink">
+                Item Out of Stock
+              </AlertTitle>
+              <AlertDescription className="text-xs text-taupe leading-relaxed">
+                {stockAlert.message ? (
+                  <span>{stockAlert.message}</span>
+                ) : (
+                  <>
+                    <span className="font-semibold text-ink">{stockAlert.productName}</span> is currently unavailable and cannot be added to your bag.
+                  </>
+                )}
+              </AlertDescription>
+              <AlertAction>
+                <button
+                  type="button"
+                  onClick={dismissStockAlert}
+                  className="rounded p-1 text-taupe transition-colors hover:text-ink cursor-pointer"
+                  aria-label="Dismiss alert"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </AlertAction>
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </CartContext.Provider>
+  );
 }
 
 export function useCart() {

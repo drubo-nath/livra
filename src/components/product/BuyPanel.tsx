@@ -9,11 +9,13 @@ import { cn } from "@/lib/cn";
 import { EASE } from "@/components/motion/Reveal";
 import SizeChartModal from "@/components/sizing/SizeChartModal";
 import Link from "next/link";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const FINISH_ORDER = ["XS", "S", "M", "L"];
 
 export default function BuyPanel({ product }: { product: ProductDTO }) {
-  const { add } = useCart();
+  const { add, showStockAlert } = useCart();
   const [qty, setQty] = useState(1);
   const [size, setSize] = useState(
     product.sizes.includes("M") ? "M" : (product.sizes[0] ?? "M"),
@@ -24,7 +26,10 @@ export default function BuyPanel({ product }: { product: ProductDTO }) {
   const isOutOfStock = !product.inStock || product.stock === 0;
 
   const handleAdd = () => {
-    if (isOutOfStock) return;
+    if (isOutOfStock) {
+      showStockAlert(product.name);
+      return;
+    }
     add(product, { qty, size });
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
@@ -56,13 +61,13 @@ export default function BuyPanel({ product }: { product: ProductDTO }) {
               "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide",
               isOutOfStock
                 ? "bg-red-50 text-red-700 border border-red-200"
-                : "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                : "bg-clay/10 text-clay-deep border border-clay/30"
             )}
           >
             <span
               className={cn(
                 "h-2 w-2 rounded-full",
-                isOutOfStock ? "bg-red-500" : "bg-emerald-600 animate-pulse"
+                isOutOfStock ? "bg-red-500" : "bg-clay animate-pulse"
               )}
             />
             {isOutOfStock ? "Out of Stock" : "In Stock"}
@@ -70,23 +75,7 @@ export default function BuyPanel({ product }: { product: ProductDTO }) {
         </div>
       </div>
 
-      {/* Stock Quantity Details Banner */}
-      <div className="mt-3.5 flex items-center justify-between py-2 px-3.5 rounded-md border border-line/60 bg-sand/20 text-xs">
-        <span className="text-taupe font-medium">Availability</span>
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "font-medium",
-              isOutOfStock ? "text-red-700" : "text-emerald-800"
-            )}
-          >
-            {isOutOfStock ? "Unavailable" : "Available"}
-          </span>
-          <span className="text-taupe font-numeric">
-            · {isOutOfStock ? "0 units available" : `${product.stock} units available in Dhaka atelier`}
-          </span>
-        </div>
-      </div>
+
 
       <p className="mt-5 max-w-md text-[15px] leading-relaxed text-taupe">
         {product.description}
@@ -177,37 +166,46 @@ export default function BuyPanel({ product }: { product: ProductDTO }) {
         </div>
         <motion.button
           onClick={handleAdd}
-          disabled={isOutOfStock}
-          whileTap={isOutOfStock ? {} : { scale: 0.98 }}
+          aria-disabled={isOutOfStock}
+          whileTap={isOutOfStock ? { scale: 0.99 } : { scale: 0.98 }}
           className={cn(
-            "font-serif text-xs uppercase tracking-widest flex-1 py-4 transition-colors duration-300",
+            "font-serif text-xs uppercase tracking-widest flex-1 py-4 transition-colors duration-300 cursor-pointer",
             isOutOfStock
-              ? "bg-neutral-200 text-neutral-500 cursor-not-allowed"
+              ? "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
               : added
                 ? "bg-clay text-cream"
-                : "bg-ink text-cream hover:bg-clay-deep cursor-pointer"
+                : "bg-ink text-cream hover:bg-clay-deep"
           )}
+          aria-label={isOutOfStock ? `${product.name} is out of stock (click for details)` : `Add to Bag`}
         >
           {isOutOfStock
-            ? "Out of Stock"
+            ? "Out of Stock (Click for details)"
             : added
               ? "Added to Bag ✦"
               : `Add to Bag — ${formatBDT(product.price * qty)}`}
         </motion.button>
       </div>
       {isOutOfStock && (
-        <p className="mt-2.5 text-xs text-taupe text-center">
-          This set is currently unavailable. New handcrafted sets are in production.
-        </p>
+        <div className="mt-4">
+          <Alert variant="brand" className="border-line/70 bg-sand/30">
+            <AlertCircle className="size-4 text-clay" />
+            <AlertTitle className="font-serif font-medium text-ink">
+              Currently Unavailable
+            </AlertTitle>
+            <AlertDescription className="text-xs text-taupe leading-relaxed">
+              This handcrafted set is currently sold out. New sets are in production at our Dhaka atelier.
+            </AlertDescription>
+          </Alert>
+        </div>
       )}
 
       {/* Assurances */}
       <ul className="hairline mt-10 space-y-3.5 border-t pt-8 text-sm text-taupe">
         {[
-          "24 nails in 12 sizes — a custom fit for every finger",
-          "Reusable up to 5 wears with gentle removal",
+          "10 nails in 4 sizes — a custom fit for every finger",
+          "Reusable up to multiple wears with gentle removal",
           "HEMA-free, cruelty-free, vegan formula",
-          "Ships within 24 hours from Dhaka",
+          "Ships within 7 business days without any delivery free",
         ].map((t) => (
           <li key={t} className="flex gap-3">
             <span className="text-clay">✦</span>

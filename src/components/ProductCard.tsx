@@ -11,9 +11,8 @@ import Swatch from "@/components/Swatch";
 import { EASE } from "@/components/motion/Reveal";
 import { cn } from "@/lib/cn";
 import { getProductLifestyleImage } from "@/lib/product-media";
-
 export default function ProductCard({ product }: { product: ProductDTO }) {
-  const { add } = useCart();
+  const { add, showStockAlert } = useCart();
   const [added, setAdded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -54,7 +53,10 @@ export default function ProductCard({ product }: { product: ProductDTO }) {
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isOutOfStock) return;
+    if (isOutOfStock) {
+      showStockAlert(product.name, "Sorry, this product is currently out of stock.");
+      return;
+    }
     add(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 1600);
@@ -211,14 +213,6 @@ export default function ProductCard({ product }: { product: ProductDTO }) {
                   </span>
                 )}
               </div>
-              <span
-                className={cn(
-                  "text-[10px] sm:text-[11px] font-medium tracking-tight shrink-0",
-                  isOutOfStock ? "text-red-600" : "text-emerald-700"
-                )}
-              >
-                {isOutOfStock ? "Out of Stock" : "In Stock"}
-              </span>
             </div>
           </Link>
 
@@ -226,15 +220,15 @@ export default function ProductCard({ product }: { product: ProductDTO }) {
           <button
             type="button"
             onClick={handleQuickAdd}
-            disabled={isOutOfStock}
+            aria-disabled={isOutOfStock}
             className={cn(
-              "shrink-0 mt-0.5 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-end ml-0.5 transition-all",
+              "shrink-0 mt-0.5 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-end ml-0.5 transition-all cursor-pointer",
               isOutOfStock
-                ? "text-taupe/40 cursor-not-allowed opacity-40"
-                : "text-ink hover:text-clay active:scale-90 cursor-pointer"
+                ? "text-taupe/40 hover:text-clay"
+                : "text-ink hover:text-clay active:scale-90"
             )}
-            aria-label={isOutOfStock ? `${product.name} is out of stock` : `Add ${product.name} to bag`}
-            title={isOutOfStock ? "Out of Stock" : "Add to bag"}
+            aria-label={isOutOfStock ? `${product.name} is out of stock (click for details)` : `Add ${product.name} to bag`}
+            title={isOutOfStock ? "Out of Stock — click for details" : "Add to bag"}
           >
             {added ? (
               <Check className="h-5 w-5 stroke-[2] text-clay animate-scale-in" />
